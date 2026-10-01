@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Mail, Lock, Eye, EyeOff, ShieldCheck, AlertCircle, Clock, Loader2 } from 'lucide-react';
-// import { authService } from '../../services/authService'; // Bỏ comment khi nối API thật
+// import { authService } from '../../services/authService'; // Đã giữ comment bằng tiếng Việt, sẽ bỏ khi nối API thật
 
 type LoginState = 'normal' | 'error' | 'lockout' | 'loading';
 
@@ -166,7 +166,11 @@ export const LoginPage: React.FC = () => {
                 </div>
                 <span className="text-[13px] font-medium text-slate-500">Ghi nhớ phiên đăng nhập</span>
               </div>
-              <button type="button" className="text-[13px] font-semibold text-[#0f766e] hover:underline">
+              <button
+                type="button"
+                onClick={() => navigate('/forgot-password')}
+                className="text-[13px] font-semibold text-[#0f766e] hover:underline"
+              >
                 Quên mật khẩu?
               </button>
             </div>
