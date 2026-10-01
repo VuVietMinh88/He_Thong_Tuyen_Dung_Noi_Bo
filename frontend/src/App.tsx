@@ -5,27 +5,72 @@ import { ForgotPasswordPage } from './pages/auth/ForgotPasswordPage';
 import { LoginPage } from './pages/auth/LoginPage';
 import { ResetPasswordPage } from './pages/auth/ResetPasswordPage';
 
+// Import MainLayout mới tạo
+import { MainLayout } from './components/MainLayout';
+// Import PermissionGuard để bảo vệ một số component mẫu
+import { PermissionGuard } from './components/PermissionGuard';
+import { ExampleUsage } from './components/ExampleUsage';
+
 const App: React.FC = () => {
   return (
     <BrowserRouter>
       <Routes>
         <Route path="/" element={<Navigate to="/login" replace />} />
 
-        {/* Route trang đăng nhập */}
+        {/* Các Route không cần Layout nội bộ (Auth Pages) */}
         <Route path="/login" element={<LoginPage />} />
-
-        {/* Route trang quên mật khẩu (TKNHTTDNB1-104) */}
         <Route path="/forgot-password" element={<ForgotPasswordPage />} />
-
-        {/* Route trang thiết lập mật khẩu mới (TKNHTTDNB1-105) */}
         <Route path="/reset-password" element={<ResetPasswordPage />} />
-
-        {/* Route trang đổi mật khẩu khi đang đăng nhập (TKNHTTDNB1-112) */}
         <Route path="/change-password" element={<ChangePasswordPage />} />
 
-        {/* Route trang chủ Dashboard tạm thời */}
-        <Route path="/dashboard" element={<div className="p-10 text-2xl font-bold text-teal-700">Trang chủ Dashboard (Đăng nhập thành công)</div>} />
+        {/* Các Route CẦN MainLayout và bảo mật quyền */}
+        <Route element={<MainLayout />}>
+          {/* Dashboard chính */}
+          <Route 
+            path="/dashboard" 
+            element={
+              <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-100">
+                <h1 className="text-2xl font-bold text-gray-800 mb-4">Trang chủ Bảng Điều Khiển</h1>
+                <p className="text-gray-600">Chào mừng bạn quay lại hệ thống quản lý nhân sự nội bộ.</p>
+              </div>
+            } 
+          />
+          
+          {/* Demo trang Quản lý nhân sự chỉ dành cho ADMIN/HR */}
+          <Route 
+            path="/employees" 
+            element={
+              <PermissionGuard allowedRoles={['ADMIN', 'HR']} fallback={<div className="text-red-500 font-bold p-4">Bạn không có quyền truy cập trang này.</div>}>
+                <div className="bg-white p-6 rounded-lg shadow-sm">
+                  <h1 className="text-2xl font-bold text-blue-800 mb-4">Trang Quản Lý Nhân Sự</h1>
+                  <p>Danh sách nhân sự sẽ hiển thị ở đây...</p>
+                </div>
+              </PermissionGuard>
+            } 
+          />
 
+          {/* Demo trang có sử dụng ExampleUsage đã tạo trước đó để test PermissionGuard */}
+          <Route 
+            path="/settings/security" 
+            element={<ExampleUsage />} 
+          />
+
+          {/* Fallback cho các đường dẫn nội bộ khác */}
+          <Route 
+            path="/recruitment" 
+            element={<div className="p-4">Tính năng đang phát triển...</div>} 
+          />
+          <Route 
+            path="/reports/salary" 
+            element={<div className="p-4">Tính năng báo cáo lương đang phát triển...</div>} 
+          />
+          <Route 
+            path="/settings/system" 
+            element={<div className="p-4">Cấu hình hệ thống đang phát triển...</div>} 
+          />
+        </Route>
+
+        {/* Route bắt lỗi chung */}
         <Route path="*" element={<Navigate to="/login" replace />} />
       </Routes>
     </BrowserRouter>
