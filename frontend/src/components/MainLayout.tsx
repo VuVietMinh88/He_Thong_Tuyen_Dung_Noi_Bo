@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Outlet, useNavigate } from 'react-router-dom';
 import { Menu, LogOut, Bell } from 'lucide-react';
 import { SidebarMenu } from './SidebarMenu';
-import { useAuth } from './PermissionGuard';
+import { useAuth } from '../context/AuthContext';
 
 /**
  * MainLayout bọc xung quanh các trang nội bộ sau khi đăng nhập.
@@ -11,14 +11,13 @@ import { useAuth } from './PermissionGuard';
 export const MainLayout: React.FC = () => {
   // Trạng thái đóng/mở sidebar
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
-  const { user } = useAuth();
+  const { user, signOut } = useAuth();
   const navigate = useNavigate();
 
   // Hàm xử lý đăng xuất giả lập
-  const handleLogout = () => {
-    // Trong thực tế sẽ gọi API và clear token/context
-    alert('Đã đăng xuất!');
-    navigate('/login');
+  const handleLogout = (): void => {
+    signOut();
+    navigate('/login', { replace: true });
   };
 
   return (

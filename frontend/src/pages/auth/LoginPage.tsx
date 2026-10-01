@@ -1,20 +1,37 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Mail, Lock, Eye, EyeOff, ShieldCheck, AlertCircle, Clock, Loader2 } from 'lucide-react';
+import { useAuth, type AuthUser } from '../../context/AuthContext';
 // import { authService } from '../../services/authService'; // Đã giữ comment bằng tiếng Việt, sẽ bỏ khi nối API thật
 
 type LoginState = 'normal' | 'error' | 'lockout' | 'loading';
 
-const INTERNAL_MOCK_EMAILS = [
-  'admin@gmail.com',
-  'recruiter@company.com',
-  'dtc24520060@ictu.edu.vn'
-];
+const MOCK_USERS: Record<string, AuthUser> = {
+  'admin@gmail.com': {
+    id: 'admin-1',
+    name: 'Quản trị viên',
+    role: 'ADMIN',
+    permissions: ['VIEW_SALARY_REPORT', 'APPROVE_RECRUITMENT', 'MANAGE_USERS'],
+  },
+  'recruiter@company.com': {
+    id: 'recruiter-1',
+    name: 'Nhân viên tuyển dụng',
+    role: 'HR',
+    permissions: ['APPROVE_RECRUITMENT'],
+  },
+  'dtc24520060@ictu.edu.vn': {
+    id: 'employee-1',
+    name: 'Nhân viên',
+    role: 'EMPLOYEE',
+    permissions: [],
+  },
+};
 
 export const LoginPage: React.FC = () => {
   const navigate = useNavigate();
+  const { signIn } = useAuth();
   
-  // States
+  // Các trạng thái của biểu mẫu đăng nhập
   const [appState, setAppState] = useState<LoginState>('normal');
   const [errorMessage, setErrorMessage] = useState<string>('');
   const [email, setEmail] = useState<string>('admin@gmail.com');
@@ -22,7 +39,7 @@ export const LoginPage: React.FC = () => {
   const [rememberMe, setRememberMe] = useState<boolean>(false);
   const [showPassword, setShowPassword] = useState<boolean>(false);
 
-  const handleLogin = async (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent<HTMLFormElement>): Promise<void> => {
     e.preventDefault();
     if (!email.trim() || !password) return;
 
@@ -33,7 +50,10 @@ export const LoginPage: React.FC = () => {
       // GIẢ LẬP GỌI API (Mock)
       await new Promise(resolve => setTimeout(resolve, 1000));
 
-      if (INTERNAL_MOCK_EMAILS.includes(email.trim().toLowerCase()) && password === '123456') {
+      const authenticatedUser = MOCK_USERS[email.trim().toLowerCase()];
+
+      if (authenticatedUser && password === '123456') {
+        signIn(authenticatedUser);
         // Thành công: Chuyển hướng theo AC Jira
         navigate('/dashboard');
       } else {
@@ -58,7 +78,7 @@ export const LoginPage: React.FC = () => {
   return (
     <div className="min-h-screen w-full flex bg-slate-50 font-sans text-slate-800">
       
-      {/* LEFT COLUMN: BRANDING (Nền xanh Teal như thiết kế) */}
+      {/* Cột trái: Nhận diện thương hiệu với nền xanh ngọc */}
       <div className="hidden lg:flex lg:w-1/2 bg-[#0f766e] flex-col items-center justify-center p-12 relative overflow-hidden">
         {/* Hình minh họa có viền bo góc */}
         <div className="bg-teal-800/20 p-2 rounded-2xl mb-8 backdrop-blur-sm">
@@ -79,11 +99,11 @@ export const LoginPage: React.FC = () => {
         </h2>
       </div>
 
-      {/* RIGHT COLUMN: FORM ĐĂNG NHẬP */}
+      {/* Cột phải: Biểu mẫu đăng nhập */}
       <div className="w-full lg:w-1/2 flex items-center justify-center p-6 sm:p-12 relative">
         <div className="w-full max-w-[440px] bg-white p-10 rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100">
           
-          {/* Form Header */}
+          {/* Tiêu đề biểu mẫu */}
           <div className="mb-8 text-center flex flex-col items-center">
             <div className="w-12 h-12 bg-teal-50 rounded-xl flex items-center justify-center mb-4 text-[#0f766e]">
               <ShieldCheck className="w-7 h-7"/>
@@ -95,7 +115,7 @@ export const LoginPage: React.FC = () => {
             <p className="text-xs text-slate-400 mt-1">dành cho cán bộ và nhân sự tuyển dụng</p>
           </div>
 
-          {/* Error Alerts */}
+          {/* Thông báo lỗi đăng nhập */}
           {appState === 'error' && (
             <div className="mb-6 p-3 bg-red-50 border border-red-100 rounded-lg flex items-start gap-2.5 text-red-600 animate-in fade-in">
               <AlertCircle className="w-5 h-5 flex-shrink-0"/>
@@ -110,9 +130,9 @@ export const LoginPage: React.FC = () => {
             </div>
           )}
 
-          {/* Form Fields */}
+          {/* Các trường thông tin đăng nhập */}
           <form onSubmit={handleLogin} className="space-y-5">
-            {/* Email */}
+            {/* Địa chỉ email */}
             <div className="space-y-1.5">
               <label className="block text-xs font-semibold text-slate-600">Email công ty</label>
               <div className="relative">
@@ -131,7 +151,7 @@ export const LoginPage: React.FC = () => {
               </div>
             </div>
 
-            {/* Password */}
+            {/* Mật khẩu */}
             <div className="space-y-1.5">
               <label className="block text-xs font-semibold text-slate-600">Mật khẩu</label>
               <div className="relative">
@@ -158,7 +178,7 @@ export const LoginPage: React.FC = () => {
               </div>
             </div>
 
-            {/* Remember Me & Forgot Password */}
+            {/* Ghi nhớ phiên đăng nhập và quên mật khẩu */}
             <div className="flex items-center justify-between pt-1">
               <div className="flex items-center gap-2 cursor-pointer" onClick={() => setRememberMe(!rememberMe)}>
                 <div className={`w-8 h-4 rounded-full relative transition-colors ${rememberMe ? 'bg-[#0f766e]' : 'bg-slate-200'}`}>
@@ -175,7 +195,7 @@ export const LoginPage: React.FC = () => {
               </button>
             </div>
 
-            {/* Submit Button */}
+            {/* Nút gửi biểu mẫu */}
             <button
               type="submit"
               disabled={appState === 'loading' || appState === 'lockout'}

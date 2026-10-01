@@ -8,8 +8,7 @@ import {
   FileText, 
   ShieldCheck 
 } from 'lucide-react';
-// Import hook useAuth từ component PermissionGuard (hoặc AuthContext thực tế)
-import { useAuth } from './PermissionGuard';
+import { useAuth } from '../context/AuthContext';
 
 // Định nghĩa cấu trúc cho mỗi mục trong Menu
 export interface MenuItem {

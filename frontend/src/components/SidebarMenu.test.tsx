@@ -3,14 +3,14 @@ import { render, screen } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { BrowserRouter } from 'react-router-dom';
 import { SidebarMenu } from './SidebarMenu';
-import * as PermissionGuardModule from './PermissionGuard';
+import * as AuthContextModule from '../context/AuthContext';
 
 // Mock hook useAuth để giả lập các ngữ cảnh quyền khác nhau
-vi.mock('./PermissionGuard', () => ({
+vi.mock('../context/AuthContext', () => ({
   useAuth: vi.fn(),
 }));
 
-const mockUseAuth = vi.mocked(PermissionGuardModule.useAuth);
+const mockUseAuth = vi.mocked(AuthContextModule.useAuth);
 
 // Hàm tiện ích bọc component trong Router vì NavLink cần nằm trong Router context
 const renderWithRouter = (ui: React.ReactElement) => {
@@ -31,6 +31,8 @@ describe('SidebarMenu Component', () => {
         role: 'ADMIN',
         permissions: ['APPROVE_RECRUITMENT', 'VIEW_SALARY_REPORT'],
       },
+      signIn: vi.fn(),
+      signOut: vi.fn(),
     });
 
     renderWithRouter(<SidebarMenu />);
@@ -52,6 +54,8 @@ describe('SidebarMenu Component', () => {
         role: 'EMPLOYEE',
         permissions: [], // Không có quyền đặc biệt
       },
+      signIn: vi.fn(),
+      signOut: vi.fn(),
     });
 
     renderWithRouter(<SidebarMenu />);
@@ -74,6 +78,8 @@ describe('SidebarMenu Component', () => {
         role: 'HR',
         permissions: ['APPROVE_RECRUITMENT'], // HR có quyền duyệt tuyển dụng
       },
+      signIn: vi.fn(),
+      signOut: vi.fn(),
     });
 
     renderWithRouter(<SidebarMenu />);
@@ -90,6 +96,8 @@ describe('SidebarMenu Component', () => {
   it('4. Giao diện thu gọn (isCollapsed = true) sẽ ẩn label chữ', () => {
     mockUseAuth.mockReturnValue({
       user: { id: '1', name: 'A', role: 'ADMIN', permissions: [] },
+      signIn: vi.fn(),
+      signOut: vi.fn(),
     });
 
     renderWithRouter(<SidebarMenu isCollapsed={true} />);

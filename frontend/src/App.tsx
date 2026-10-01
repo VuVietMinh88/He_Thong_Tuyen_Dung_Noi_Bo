@@ -4,11 +4,11 @@ import { ChangePasswordPage } from './pages/auth/ChangePasswordPage';
 import { ForgotPasswordPage } from './pages/auth/ForgotPasswordPage';
 import { LoginPage } from './pages/auth/LoginPage';
 import { ResetPasswordPage } from './pages/auth/ResetPasswordPage';
+import { UnauthorizedPage } from './pages/errors/UnauthorizedPage';
 
 // Import MainLayout mới tạo
 import { MainLayout } from './components/MainLayout';
-// Import PermissionGuard để bảo vệ một số component mẫu
-import { PermissionGuard } from './components/PermissionGuard';
+import { ProtectedRoute } from './components/routes/ProtectedRoute';
 import { ExampleUsage } from './components/ExampleUsage';
 
 const App: React.FC = () => {
@@ -22,9 +22,11 @@ const App: React.FC = () => {
         <Route path="/forgot-password" element={<ForgotPasswordPage />} />
         <Route path="/reset-password" element={<ResetPasswordPage />} />
         <Route path="/change-password" element={<ChangePasswordPage />} />
+        <Route path="/unauthorized" element={<UnauthorizedPage />} />
 
         {/* Các Route CẦN MainLayout và bảo mật quyền */}
-        <Route element={<MainLayout />}>
+        <Route element={<ProtectedRoute />}>
+          <Route element={<MainLayout />}>
           {/* Dashboard chính */}
           <Route 
             path="/dashboard" 
@@ -38,16 +40,18 @@ const App: React.FC = () => {
           
           {/* Demo trang Quản lý nhân sự chỉ dành cho ADMIN/HR */}
           <Route 
-            path="/employees" 
-            element={
-              <PermissionGuard allowedRoles={['ADMIN', 'HR']} fallback={<div className="text-red-500 font-bold p-4">Bạn không có quyền truy cập trang này.</div>}>
+            element={<ProtectedRoute allowedRoles={['ADMIN', 'HR']} />}
+          >
+            <Route
+              path="/employees"
+              element={
                 <div className="bg-white p-6 rounded-lg shadow-sm">
                   <h1 className="text-2xl font-bold text-blue-800 mb-4">Trang Quản Lý Nhân Sự</h1>
                   <p>Danh sách nhân sự sẽ hiển thị ở đây...</p>
                 </div>
-              </PermissionGuard>
-            } 
-          />
+              }
+            />
+          </Route>
 
           {/* Demo trang có sử dụng ExampleUsage đã tạo trước đó để test PermissionGuard */}
           <Route 
@@ -60,14 +64,17 @@ const App: React.FC = () => {
             path="/recruitment" 
             element={<div className="p-4">Tính năng đang phát triển...</div>} 
           />
-          <Route 
-            path="/reports/salary" 
-            element={<div className="p-4">Tính năng báo cáo lương đang phát triển...</div>} 
-          />
+          <Route element={<ProtectedRoute requiredPermissions={['VIEW_SALARY_REPORT']} />}>
+            <Route
+              path="/reports/salary"
+              element={<div className="p-4">Tính năng báo cáo lương đang phát triển...</div>}
+            />
+          </Route>
           <Route 
             path="/settings/system" 
             element={<div className="p-4">Cấu hình hệ thống đang phát triển...</div>} 
           />
+          </Route>
         </Route>
 
         {/* Route bắt lỗi chung */}
