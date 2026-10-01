@@ -1,29 +1,11 @@
-import axios from 'axios';
+import axiosClient from '../utils/axiosClient';
 import type { LoginRequest, LoginResponse, ForgotPasswordRequest, ApiMessageResponse } from '../types/auth';
 
-// Khởi tạo instance axios với cấu hình cơ bản
-const apiClient = axios.create({
-  baseURL: '/api',
-  timeout: 10000, // Tự động ngắt nếu không phản hồi sau 10s
-  headers: {
-    'Content-Type': 'application/json',
-  },
-});
-
-// Thêm Interceptor để tự động đính kèm Token vào request
-apiClient.interceptors.request.use((config) => {
-  const token = localStorage.getItem('accessToken') || sessionStorage.getItem('accessToken');
-  if (token && config.headers) {
-    config.headers.Authorization = `Bearer ${token}`;
-  }
-  return config;
-});
-
-// Các hàm call API liên quan đến xác thực (Login, Forgot Password)
+// Các hàm gọi API liên quan đến xác thực như đăng nhập, quên mật khẩu và đăng xuất.
 export const authService = {
-  // Hàm xử lý Đăng nhập
+  // Hàm xử lý đăng nhập và lưu token/user theo lựa chọn "ghi nhớ đăng nhập".
   login: async (data: LoginRequest): Promise<LoginResponse> => {
-    const response = await apiClient.post<LoginResponse>('/auth/login', data);
+    const response = await axiosClient.post<LoginResponse>('/auth/login', data);
     const responseData = response.data;
     
     if (responseData.accessToken) {
@@ -43,13 +25,13 @@ export const authService = {
     return responseData;
   },
 
-  // Hàm xử lý Quên mật khẩu
+  // Hàm xử lý yêu cầu quên mật khẩu.
   forgotPassword: async (data: ForgotPasswordRequest): Promise<ApiMessageResponse> => {
-    const response = await apiClient.post<ApiMessageResponse>('/auth/forgot-password', data);
+    const response = await axiosClient.post<ApiMessageResponse>('/auth/forgot-password', data);
     return response.data;
   },
 
-  // Hàm Đăng xuất
+  // Hàm đăng xuất, xóa token và thông tin người dùng khỏi cả hai bộ nhớ.
   logout: () => {
     localStorage.removeItem('accessToken');
     localStorage.removeItem('currentUser');
