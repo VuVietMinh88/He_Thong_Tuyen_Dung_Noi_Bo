@@ -7,6 +7,7 @@ import {
   Settings,
   ShieldCheck,
   Users,
+  UserCheck,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { usePermission } from '../hooks/usePermission';
@@ -30,6 +31,13 @@ const MENU_ITEMS: MenuItem[] = [
     icon: <House className="h-5 w-5" />,
     requiredPermissions: [],
     allowedRoles: [],
+  },
+  {
+    label: 'Quản Lý Tài Khoản',
+    path: '/admin/accounts',
+    icon: <UserCheck className="h-5 w-5" />,
+    requiredPermissions: [],
+    allowedRoles: ['ADMIN'],
   },
   {
     label: 'Quản Lý Nhân Sự',
