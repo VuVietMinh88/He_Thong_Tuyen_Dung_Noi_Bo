@@ -68,7 +68,7 @@ export const ResetPasswordPage: React.FC = () => {
         navigate('/login');
       }, 1500);
       
-    } catch (err: unknown) {
+    } catch {
       setPageState('error');
     } finally {
       if (pageState !== 'success') {
