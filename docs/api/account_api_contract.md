@@ -64,7 +64,61 @@
 }
 ```
 
+## 2. Endpoint: Cập nhật thông tin tài khoản (TKNHTTDNB1-144)
+
+- **Method:** `PUT`
+- **Path:** `/api/admin/accounts/{id}`
+- **Xác thực:** Bearer Token (`Authorization: Bearer <accessToken>`)
+- **Yêu cầu quyền:** `MANAGE_USERS` hoặc Role `ADMIN`
+
+### Path Parameters
+| Tham số | Kiểu dữ liệu | Bắt buộc | Mô tả |
+| :--- | :--- | :--- | :--- |
+| `id` | `string` / `number` | Có | Mã định danh tài khoản cần cập nhật |
+
+### Request Body (JSON)
+| Trường | Kiểu dữ liệu | Bắt buộc | Mô tả & Quy tắc kiểm tra (Validation) |
+| :--- | :--- | :--- | :--- |
+| `fullName` | `string` | Có | Họ và tên người dùng (2 - 100 ký tự, không chứa ký tự đặc biệt) |
+| `email` | `string` | Có | Địa chỉ email công ty hợp lệ (định dạng chuẩn email RFC 5322) |
+
+```json
+{
+  "fullName": "Nguyễn Văn An",
+  "email": "an.nguyen@company.com"
+}
+```
+
+### Response Thành công (HTTP 200 OK)
+```json
+{
+  "success": true,
+  "data": {
+    "id": "acc-001",
+    "fullName": "Nguyễn Văn An",
+    "email": "an.nguyen@company.com",
+    "role": "ADMIN",
+    "status": "ACTIVE",
+    "createdAt": "2026-01-15T08:30:00Z",
+    "lastLoginAt": "2026-10-01T14:20:00Z"
+  },
+  "message": "Cập nhật thông tin tài khoản thành công."
+}
+```
+
 ### Response Lỗi
+- **HTTP 400 Bad Request:** Dữ liệu không hợp lệ (họ tên rỗng, email sai định dạng hoặc email đã được sử dụng bởi tài khoản khác).
+  ```json
+  {
+    "success": false,
+    "message": "Email đã tồn tại trong hệ thống.",
+    "errors": {
+      "email": "Email an.nguyen@company.com đã được đăng ký bởi tài khoản khác."
+    }
+  }
+  ```
 - **HTTP 401 Unauthorized:** Phiên đăng nhập hết hạn hoặc chưa đăng nhập.
 - **HTTP 403 Forbidden:** Người dùng không có quyền quản lý tài khoản (`MANAGE_USERS` / `ADMIN`).
+- **HTTP 404 Not Found:** Không tìm thấy tài khoản với ID yêu cầu.
 - **HTTP 500 Internal Server Error:** Lỗi phía máy chủ cơ sở dữ liệu.
+

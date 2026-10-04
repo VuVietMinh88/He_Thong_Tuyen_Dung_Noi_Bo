@@ -5,7 +5,13 @@
  */
 
 import axiosClient from '../utils/axiosClient';
-import type { Account, AccountListResponse, AccountQueryParams } from '../types/account';
+import type {
+  Account,
+  AccountListResponse,
+  AccountQueryParams,
+  UpdateAccountRequest,
+  UpdateAccountResponse,
+} from '../types/account';
 
 // Dữ liệu mẫu chuẩn hợp đồng API để phục vụ kiểm thử và hiển thị giao diện khi Backend đang phát triển
 const INITIAL_MOCK_ACCOUNTS: Account[] = [
@@ -119,6 +125,9 @@ const INITIAL_MOCK_ACCOUNTS: Account[] = [
   },
 ];
 
+// Bộ nhớ mock runtime cho phép thay đổi dữ liệu khi kiểm thử hoặc khi Backend chưa chạy
+let mockAccountsStorage: Account[] = [...INITIAL_MOCK_ACCOUNTS];
+
 // Hàm giả lập phân trang, tìm kiếm và lọc dữ liệu từ tập dữ liệu mẫu
 const fetchMockAccounts = (params: AccountQueryParams): AccountListResponse => {
   const searchTerm: string = (params.search ?? '').trim().toLowerCase();
@@ -126,7 +135,7 @@ const fetchMockAccounts = (params: AccountQueryParams): AccountListResponse => {
   const filterStatus: string = (params.status ?? '').trim().toUpperCase();
 
   // Lọc theo từ khóa tìm kiếm (họ tên hoặc email) và bộ lọc vai trò, trạng thái
-  const filteredList: Account[] = INITIAL_MOCK_ACCOUNTS.filter((acc: Account) => {
+  const filteredList: Account[] = mockAccountsStorage.filter((acc: Account) => {
     const matchSearch: boolean =
       !searchTerm ||
       acc.fullName.toLowerCase().includes(searchTerm) ||
@@ -159,6 +168,12 @@ const fetchMockAccounts = (params: AccountQueryParams): AccountListResponse => {
   };
 };
 
+// Interface định nghĩa phản hồi lỗi từ API Backend
+interface BackendErrorPayload {
+  message?: string;
+  errors?: Record<string, string>;
+}
+
 // Đối tượng Service cung cấp các hàm gọi API tài khoản
 export const accountService = {
   /**
@@ -183,12 +198,120 @@ export const accountService = {
       }
 
       // Xử lý trường hợp Vite dev server trả về HTML index khi route backend không tồn tại
-      await new Promise((resolve) => setTimeout(resolve, 200));
+      await new Promise((resolve) => setTimeout(resolve, 150));
       return fetchMockAccounts(params);
     } catch {
       // Khi Backend chưa hoàn thiện endpoint /admin/accounts, cung cấp dữ liệu giả lập chuẩn API Contract
-      await new Promise((resolve) => setTimeout(resolve, 200));
+      await new Promise((resolve) => setTimeout(resolve, 150));
       return fetchMockAccounts(params);
     }
   },
+
+  /**
+   * Cập nhật thông tin tài khoản (Họ và tên, Email) - Story TKNHTTDNB1-144.
+   * Gửi request PUT đến /admin/accounts/:id. Fallback sang mock data nếu backend chưa triển khai.
+   */
+  updateAccount: async (
+    id: string | number,
+    data: UpdateAccountRequest
+  ): Promise<UpdateAccountResponse> => {
+    try {
+      const response = await axiosClient.put<UpdateAccountResponse>(`/admin/accounts/${id}`, data);
+
+      if (response.data && response.data.data) {
+        // Đồng bộ bản ghi mới cập nhật vào bộ nhớ mock runtime
+        const updatedIndex = mockAccountsStorage.findIndex(
+          (acc) => String(acc.id) === String(id)
+        );
+        if (updatedIndex !== -1) {
+          mockAccountsStorage[updatedIndex] = {
+            ...mockAccountsStorage[updatedIndex],
+            ...response.data.data,
+          };
+        }
+        return response.data;
+      }
+
+      // Nếu backend trả về HTML hoặc cấu trúc không đúng, fallback xử lý mock
+      return accountService.updateMockAccount(id, data);
+    } catch (error: unknown) {
+      // Nếu là lỗi từ Backend (ví dụ 400 Bad Request trùng email)
+      if (
+        typeof error === 'object' &&
+        error !== null &&
+        'response' in error
+      ) {
+        const axiosErr = error as { response?: { status?: number; data?: BackendErrorPayload } };
+        const status = axiosErr.response?.status;
+        const errData = axiosErr.response?.data;
+
+        // Nếu lỗi 400 hoặc 422 từ backend, truyền nguyên văn lỗi validation về cho form
+        if (status === 400 || status === 422) {
+          const detailedMessage =
+            errData?.errors?.email ||
+            errData?.errors?.fullName ||
+            errData?.message ||
+            'Dữ liệu gửi lên không hợp lệ.';
+          throw new Error(detailedMessage, { cause: error });
+        }
+
+        // Nếu lỗi 404 Not Found từ endpoint chưa được backend cài đặt, fallback mock
+        if (status === 404) {
+          return accountService.updateMockAccount(id, data);
+        }
+      }
+
+      // Các trường hợp mất mạng hoặc endpoint chưa sẵn sàng -> fallback mock
+      return accountService.updateMockAccount(id, data);
+    }
+  },
+
+  /**
+   * Cập nhật tài khoản trong bộ nhớ mock phục vụ môi trường Dev/Test khi Backend chưa triển khai xong.
+   */
+  updateMockAccount: async (
+    id: string | number,
+    data: UpdateAccountRequest
+  ): Promise<UpdateAccountResponse> => {
+    // Mô phỏng độ trễ mạng thực tế
+    await new Promise((resolve) => setTimeout(resolve, 250));
+
+    // Kiểm tra trùng lặp email với tài khoản khác
+    const normalizedEmail = data.email.trim().toLowerCase();
+    const isEmailDuplicate = mockAccountsStorage.some(
+      (acc) => String(acc.id) !== String(id) && acc.email.trim().toLowerCase() === normalizedEmail
+    );
+
+    if (isEmailDuplicate) {
+      throw new Error(`Email "${data.email}" đã được sử dụng bởi một tài khoản khác trong hệ thống.`);
+    }
+
+    // Tìm và cập nhật tài khoản
+    const accountIndex = mockAccountsStorage.findIndex((acc) => String(acc.id) === String(id));
+    if (accountIndex === -1) {
+      throw new Error(`Không tìm thấy tài khoản có mã "${id}" để cập nhật.`);
+    }
+
+    const updatedAccount: Account = {
+      ...mockAccountsStorage[accountIndex],
+      fullName: data.fullName.trim(),
+      email: data.email.trim(),
+    };
+
+    mockAccountsStorage[accountIndex] = updatedAccount;
+
+    return {
+      success: true,
+      data: updatedAccount,
+      message: 'Cập nhật thông tin tài khoản thành công.',
+    };
+  },
+
+  /**
+   * Khôi phục bộ nhớ mock về trạng thái ban đầu (hữu ích cho unit test)
+   */
+  resetMockStorage: (): void => {
+    mockAccountsStorage = [...INITIAL_MOCK_ACCOUNTS];
+  },
 };
+

@@ -44,3 +44,24 @@ export interface AccountListResponse {
   pagination: AccountPagination;
   message?: string;
 }
+
+// Interface dữ liệu gửi lên khi cập nhật thông tin tài khoản (TKNHTTDNB1-144)
+export interface UpdateAccountRequest {
+  fullName: string;
+  email: string;
+}
+
+// Interface kết quả trả về khi cập nhật thông tin tài khoản thành công
+export interface UpdateAccountResponse {
+  success: boolean;
+  data: Account;
+  message?: string;
+}
+
+// Interface lưu trữ lỗi xác thực của các trường trong form chỉnh sửa tài khoản
+export interface AccountFormErrors {
+  fullName?: string;
+  email?: string;
+  general?: string;
+}
+

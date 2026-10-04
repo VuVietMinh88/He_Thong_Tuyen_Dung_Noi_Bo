@@ -22,6 +22,7 @@ export interface AccountTableProps {
   onRetry: () => void;
   hasFiltersActive?: boolean;
   onClearFilters?: () => void;
+  onEditAccount?: (account: Account) => void;
 }
 
 /**
@@ -75,6 +76,7 @@ export const AccountTable: React.FC<AccountTableProps> = ({
   onRetry,
   hasFiltersActive = false,
   onClearFilters,
+  onEditAccount,
 }) => {
   // 1. Trạng thái xảy ra lỗi khi gọi API
   if (isError) {
@@ -242,16 +244,21 @@ export const AccountTable: React.FC<AccountTableProps> = ({
                     <AccountStatusBadge status={account.status} />
                   </td>
 
-                  {/* Cột 6: Vị trí dành riêng cho các hành động tiếp theo (Edit, Role, Lock/Unlock) */}
+                  {/* Cột 6: Vị trí dành riêng cho các hành động (Edit, Role, Lock/Unlock) */}
                   <td className="py-3.5 px-4 text-center">
                     <div className="inline-flex items-center justify-center gap-1.5">
-                      {/* Nút Chỉnh sửa */}
+                      {/* Nút Chỉnh sửa (TKNHTTDNB1-144) */}
                       <button
                         type="button"
-                        disabled
-                        aria-label="Chỉnh sửa tài khoản (sắp ra mắt)"
-                        title="Chỉnh sửa tài khoản (Tính năng sẽ phát triển ở nhiệm vụ tiếp theo)"
-                        className="p-1.5 rounded-md text-slate-400 hover:text-slate-600 bg-slate-50 hover:bg-slate-100 disabled:opacity-60 disabled:cursor-not-allowed transition-colors"
+                        onClick={() => onEditAccount?.(account)}
+                        disabled={!onEditAccount}
+                        aria-label={onEditAccount ? `Chỉnh sửa tài khoản ${account.fullName}` : 'Chỉnh sửa tài khoản (sắp ra mắt)'}
+                        title={onEditAccount ? `Chỉnh sửa thông tin tài khoản ${account.fullName}` : 'Chỉnh sửa tài khoản (Tính năng sẽ phát triển ở nhiệm vụ tiếp theo)'}
+                        className={`p-1.5 rounded-md border transition-colors ${
+                          onEditAccount
+                            ? 'text-slate-600 hover:text-[#00867D] hover:bg-emerald-50 bg-white border-slate-200 cursor-pointer shadow-2xs'
+                            : 'text-slate-400 hover:text-slate-600 bg-slate-50 border-transparent hover:bg-slate-100 disabled:opacity-60 disabled:cursor-not-allowed'
+                        }`}
                       >
                         <Edit3 className="w-4 h-4" />
                       </button>

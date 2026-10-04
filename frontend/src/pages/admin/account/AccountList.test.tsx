@@ -35,7 +35,7 @@ const MOCK_RESPONSE: AccountListResponse = {
   },
 };
 
-describe('AccountList Page (TKNHTTDNB1-142, TKNHTTDNB1-150, TKNHTTDNB1-160)', () => {
+describe('AccountList Page (TKNHTTDNB1-142, TKNHTTDNB1-144, TKNHTTDNB1-150, TKNHTTDNB1-160)', () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
@@ -75,7 +75,7 @@ describe('AccountList Page (TKNHTTDNB1-142, TKNHTTDNB1-150, TKNHTTDNB1-160)', ()
     });
   });
 
-  it('3. Vị trí hành động (Edit, Role, Lock/Unlock) được tạo sẵn và disabled cho task sau', async () => {
+  it('3. Kích hoạt nút Chỉnh sửa tài khoản (TKNHTTDNB1-144) trong khi các nút Role, Lock/Unlock vẫn bảo lưu', async () => {
     vi.spyOn(accountService, 'getAccounts').mockResolvedValueOnce(MOCK_RESPONSE);
 
     render(<AccountList />);
@@ -84,11 +84,12 @@ describe('AccountList Page (TKNHTTDNB1-142, TKNHTTDNB1-150, TKNHTTDNB1-160)', ()
       expect(screen.getByText('Nguyễn Văn An')).toBeInTheDocument();
     });
 
-    // Các nút hành động được render ở trạng thái disabled
+    // Nút Chỉnh sửa tài khoản đã được kích hoạt theo Story TKNHTTDNB1-144
     const editButtons = screen.getAllByLabelText(/Chỉnh sửa tài khoản/i);
     expect(editButtons.length).toBeGreaterThan(0);
-    expect(editButtons[0]).toBeDisabled();
+    expect(editButtons[0]).not.toBeDisabled();
 
+    // Các nút Role vẫn disabled để chờ story tiếp theo
     const roleButtons = screen.getAllByLabelText(/Phân quyền vai trò/i);
     expect(roleButtons.length).toBeGreaterThan(0);
     expect(roleButtons[0]).toBeDisabled();
@@ -200,6 +201,86 @@ describe('AccountList Page (TKNHTTDNB1-142, TKNHTTDNB1-150, TKNHTTDNB1-160)', ()
     await waitFor(() => {
       expect(getAccountsSpy).toHaveBeenCalledTimes(2);
       expect(screen.getByText('Nguyễn Văn An')).toBeInTheDocument();
+    });
+  });
+
+  it('8. Mở form chỉnh sửa khi bấm nút Chỉnh sửa trên dòng tài khoản và lưu thành công (TKNHTTDNB1-144)', async () => {
+    vi.spyOn(accountService, 'getAccounts').mockResolvedValue(MOCK_RESPONSE);
+    const updateSpy = vi.spyOn(accountService, 'updateAccount').mockResolvedValueOnce({
+      success: true,
+      data: {
+        ...MOCK_RESPONSE.data[0],
+        fullName: 'Nguyễn Văn An Đã Đổi Tên',
+        email: 'an.doiten@company.com',
+      },
+      message: 'Cập nhật thông tin tài khoản thành công.',
+    });
+
+    render(<AccountList />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Nguyễn Văn An')).toBeInTheDocument();
+    });
+
+    // Bấm nút Chỉnh sửa tài khoản đầu tiên
+    const editButton = screen.getAllByLabelText(/Chỉnh sửa tài khoản/i)[0];
+    fireEvent.click(editButton);
+
+    // Modal xuất hiện
+    await waitFor(() => {
+      expect(screen.getByRole('heading', { name: 'Chỉnh Sửa Tài Khoản' })).toBeInTheDocument();
+    });
+
+    // Kiểm tra thông tin hiện tại được nạp vào modal
+    const fullNameInput = screen.getByLabelText(/Họ và tên/i) as HTMLInputElement;
+    const emailInput = screen.getByLabelText(/Địa chỉ Email/i) as HTMLInputElement;
+    expect(fullNameInput.value).toBe('Nguyễn Văn An');
+    expect(emailInput.value).toBe('an.nguyen@company.com');
+
+    // Chỉnh sửa họ tên và email
+    await userEvent.clear(fullNameInput);
+    await userEvent.type(fullNameInput, 'Nguyễn Văn An Đã Đổi Tên');
+
+    await userEvent.clear(emailInput);
+    await userEvent.type(emailInput, 'an.doiten@company.com');
+
+    // Bấm nút Lưu thay đổi
+    const saveButton = screen.getByRole('button', { name: /Lưu thay đổi/i });
+    fireEvent.click(saveButton);
+
+    await waitFor(() => {
+      expect(updateSpy).toHaveBeenCalledWith('acc-001', {
+        fullName: 'Nguyễn Văn An Đã Đổi Tên',
+        email: 'an.doiten@company.com',
+      });
+      // Modal đóng lại
+      expect(screen.queryByRole('heading', { name: 'Chỉnh Sửa Tài Khoản' })).not.toBeInTheDocument();
+      // Thông báo thành công hiển thị
+      expect(screen.getByText('Cập nhật thông tin tài khoản thành công.')).toBeInTheDocument();
+    });
+  });
+
+  it('9. Cho phép thay đổi số lượng bản ghi mỗi trang (Page Size) (TKNHTTDNB1-150)', async () => {
+    const getAccountsSpy = vi
+      .spyOn(accountService, 'getAccounts')
+      .mockResolvedValue(MOCK_RESPONSE);
+
+    render(<AccountList />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Nguyễn Văn An')).toBeInTheDocument();
+    });
+
+    const pageSizeSelect = screen.getByLabelText('Chọn số bản ghi trên mỗi trang');
+    fireEvent.change(pageSizeSelect, { target: { value: '20' } });
+
+    await waitFor(() => {
+      expect(getAccountsSpy).toHaveBeenCalledWith(
+        expect.objectContaining({
+          size: 20,
+          page: 1,
+        })
+      );
     });
   });
 });
