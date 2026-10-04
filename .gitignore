@@ -19,7 +19,30 @@ target/
 
 # IDE
 .idea/
-.vscode/
+.vscode/*
+!.vscode/extensions.json
+!.vscode/launch.json
+!.vscode/tasks.json
+*.iml
+.classpath
+.project
+.settings/
+
+# Local tooling and agent memory
+.cache/
+.agent-memory/
+.agents/
+.codex/
+.claude/
+.chatgpt/
+.openai/
+AGENTS.md
+AGENTS.local.md
+CLAUDE.md
+CLAUDE.local.md
+/intent.md
+/plan.md
+/docs/sdlc/
 
 # OS
 .DS_Store
