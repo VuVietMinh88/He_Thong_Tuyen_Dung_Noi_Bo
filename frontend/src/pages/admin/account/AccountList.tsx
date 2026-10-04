@@ -11,6 +11,9 @@ import { AccountSearchBar } from '../../../components/account/AccountSearchBar';
 import { AccountTable } from '../../../components/account/AccountTable';
 import { AccountPagination } from '../../../components/account/AccountPagination';
 import { AccountEditModal } from '../../../components/account/AccountEditModal';
+import { AccountRoleModal } from '../../../components/account/AccountRoleModal';
+import { AccountStatusConfirmModal } from '../../../components/account/AccountStatusConfirmModal';
+import { usePermission } from '../../../hooks/usePermission';
 
 /**
  * Trang Quản lý Danh sách tài khoản dành cho Quản trị viên (Story 17 - TKNHTTDNB1-142, TKNHTTDNB1-144, TKNHTTDNB1-150).
@@ -45,6 +48,18 @@ export const AccountList: React.FC = () => {
   // Trạng thái Form Chỉnh sửa tài khoản (TKNHTTDNB1-144)
   const [selectedAccount, setSelectedAccount] = useState<Account | null>(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState<boolean>(false);
+
+  // Trạng thái Modal Phân quyền vai trò tài khoản (TKNHTTDNB1-152)
+  const [selectedAccountForRole, setSelectedAccountForRole] = useState<Account | null>(null);
+  const [isRoleModalOpen, setIsRoleModalOpen] = useState<boolean>(false);
+
+  // Trạng thái Modal Khóa / Mở khóa tài khoản (TKNHTTDNB1-161)
+  const [selectedAccountForStatus, setSelectedAccountForStatus] = useState<Account | null>(null);
+  const [isStatusModalOpen, setIsStatusModalOpen] = useState<boolean>(false);
+
+  // Kiểm tra quyền hạn của người dùng đăng nhập hiện tại
+  const { hasRole, hasAnyRole } = usePermission();
+  const canManageRoleAndStatus: boolean = hasRole('ADMIN') || hasAnyRole(['ADMIN']);
 
   // Trạng thái thông báo phản hồi thao tác người dùng (Toast Alert)
   const [toastNotification, setToastNotification] = useState<{
@@ -222,6 +237,68 @@ export const AccountList: React.FC = () => {
     [loadAccounts, queryParams]
   );
 
+  // Mở modal phân quyền vai trò tài khoản (TKNHTTDNB1-152)
+  const handleOpenRoleModal = useCallback((account: Account): void => {
+    setSelectedAccountForRole(account);
+    setIsRoleModalOpen(true);
+  }, []);
+
+  // Đóng modal phân quyền vai trò
+  const handleCloseRoleModal = useCallback((): void => {
+    setIsRoleModalOpen(false);
+    setSelectedAccountForRole(null);
+  }, []);
+
+  // Xử lý sau khi cập nhật vai trò thành công (TKNHTTDNB1-152)
+  const handleRoleSuccess = useCallback(
+    (updatedAccount: Account, message: string): void => {
+      setAccounts((prev) =>
+        prev.map((acc) =>
+          String(acc.id) === String(updatedAccount.id) ? { ...acc, ...updatedAccount } : acc
+        )
+      );
+
+      setToastNotification({
+        message,
+        type: 'success',
+      });
+
+      void loadAccounts(queryParams);
+    },
+    [loadAccounts, queryParams]
+  );
+
+  // Mở modal xác nhận thay đổi trạng thái Khóa / Mở khóa tài khoản (TKNHTTDNB1-161)
+  const handleOpenStatusModal = useCallback((account: Account): void => {
+    setSelectedAccountForStatus(account);
+    setIsStatusModalOpen(true);
+  }, []);
+
+  // Đóng modal xác nhận thay đổi trạng thái
+  const handleCloseStatusModal = useCallback((): void => {
+    setIsStatusModalOpen(false);
+    setSelectedAccountForStatus(null);
+  }, []);
+
+  // Xử lý sau khi thay đổi trạng thái tài khoản thành công (TKNHTTDNB1-161)
+  const handleStatusSuccess = useCallback(
+    (updatedAccount: Account, message: string): void => {
+      setAccounts((prev) =>
+        prev.map((acc) =>
+          String(acc.id) === String(updatedAccount.id) ? { ...acc, ...updatedAccount } : acc
+        )
+      );
+
+      setToastNotification({
+        message,
+        type: 'success',
+      });
+
+      void loadAccounts(queryParams);
+    },
+    [loadAccounts, queryParams]
+  );
+
   // Thống kê nhanh số lượng tài khoản theo dữ liệu hiện tại
   const safeAccounts: Account[] = Array.isArray(accounts) ? accounts : [];
   const activeCount: number = safeAccounts.filter((acc) => acc.status?.toUpperCase() === 'ACTIVE').length;
@@ -359,6 +436,8 @@ export const AccountList: React.FC = () => {
           hasFiltersActive={hasFiltersActive}
           onClearFilters={handleResetFilters}
           onEditAccount={handleOpenEditModal}
+          onManageRole={canManageRoleAndStatus ? handleOpenRoleModal : undefined}
+          onToggleStatus={canManageRoleAndStatus ? handleOpenStatusModal : undefined}
         />
 
         {/* Phân trang (TKNHTTDNB1-150) */}
@@ -377,6 +456,22 @@ export const AccountList: React.FC = () => {
         account={selectedAccount}
         onClose={handleCloseEditModal}
         onSuccess={handleEditSuccess}
+      />
+
+      {/* Modal Phân quyền vai trò người dùng (TKNHTTDNB1-152) */}
+      <AccountRoleModal
+        isOpen={isRoleModalOpen}
+        account={selectedAccountForRole}
+        onClose={handleCloseRoleModal}
+        onSuccess={handleRoleSuccess}
+      />
+
+      {/* Modal Xác nhận Khóa / Mở khóa tài khoản (TKNHTTDNB1-161) */}
+      <AccountStatusConfirmModal
+        isOpen={isStatusModalOpen}
+        account={selectedAccountForStatus}
+        onClose={handleCloseStatusModal}
+        onSuccess={handleStatusSuccess}
       />
     </div>
   );

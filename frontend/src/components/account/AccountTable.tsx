@@ -23,6 +23,8 @@ export interface AccountTableProps {
   hasFiltersActive?: boolean;
   onClearFilters?: () => void;
   onEditAccount?: (account: Account) => void;
+  onManageRole?: (account: Account) => void;
+  onToggleStatus?: (account: Account) => void;
 }
 
 /**
@@ -77,6 +79,8 @@ export const AccountTable: React.FC<AccountTableProps> = ({
   hasFiltersActive = false,
   onClearFilters,
   onEditAccount,
+  onManageRole,
+  onToggleStatus,
 }) => {
   // 1. Trạng thái xảy ra lỗi khi gọi API
   if (isError) {
@@ -263,29 +267,59 @@ export const AccountTable: React.FC<AccountTableProps> = ({
                         <Edit3 className="w-4 h-4" />
                       </button>
 
-                      {/* Nút Quản lý vai trò */}
+                      {/* Nút Quản lý vai trò (TKNHTTDNB1-152) */}
                       <button
                         type="button"
-                        disabled
-                        aria-label="Phân quyền vai trò (sắp ra mắt)"
-                        title="Phân quyền vai trò (Tính năng sẽ phát triển ở nhiệm vụ tiếp theo)"
-                        className="p-1.5 rounded-md text-slate-400 hover:text-slate-600 bg-slate-50 hover:bg-slate-100 disabled:opacity-60 disabled:cursor-not-allowed transition-colors"
+                        onClick={() => onManageRole?.(account)}
+                        disabled={!onManageRole}
+                        aria-label={
+                          onManageRole
+                            ? `Phân quyền vai trò cho ${account.fullName}`
+                            : 'Phân quyền vai trò (sắp ra mắt)'
+                        }
+                        title={
+                          onManageRole
+                            ? `Phân quyền vai trò cho tài khoản ${account.fullName}`
+                            : 'Phân quyền vai trò (Tính năng chưa kích hoạt)'
+                        }
+                        className={`p-1.5 rounded-md border transition-colors ${
+                          onManageRole
+                            ? 'text-purple-600 hover:text-purple-700 hover:bg-purple-50 bg-white border-slate-200 cursor-pointer shadow-2xs'
+                            : 'text-slate-400 hover:text-slate-600 bg-slate-50 border-transparent hover:bg-slate-100 disabled:opacity-60 disabled:cursor-not-allowed'
+                        }`}
                       >
                         <Shield className="w-4 h-4" />
                       </button>
 
-                      {/* Nút Khóa/Mở khóa */}
+                      {/* Nút Khóa/Mở khóa (TKNHTTDNB1-161) */}
                       <button
                         type="button"
-                        disabled
-                        aria-label={isLocked ? 'Mở khóa tài khoản (sắp ra mắt)' : 'Khóa tài khoản (sắp ra mắt)'}
-                        title={
-                          isLocked
-                            ? 'Mở khóa tài khoản (Tính năng sẽ phát triển ở nhiệm vụ tiếp theo)'
-                            : 'Khóa tài khoản (Tính năng sẽ phát triển ở nhiệm vụ tiếp theo)'
+                        onClick={() => onToggleStatus?.(account)}
+                        disabled={!onToggleStatus}
+                        aria-label={
+                          onToggleStatus
+                            ? isLocked
+                              ? `Mở khóa tài khoản ${account.fullName}`
+                              : `Khóa tài khoản ${account.fullName}`
+                            : isLocked
+                            ? 'Mở khóa tài khoản (sắp ra mắt)'
+                            : 'Khóa tài khoản (sắp ra mắt)'
                         }
-                        className={`p-1.5 rounded-md text-slate-400 hover:text-slate-600 bg-slate-50 hover:bg-slate-100 disabled:opacity-60 disabled:cursor-not-allowed transition-colors ${
-                          isLocked ? 'hover:text-emerald-600' : 'hover:text-rose-600'
+                        title={
+                          onToggleStatus
+                            ? isLocked
+                              ? `Mở khóa tài khoản ${account.fullName}`
+                              : `Khóa tài khoản ${account.fullName}`
+                            : isLocked
+                            ? 'Mở khóa tài khoản (Tính năng chưa kích hoạt)'
+                            : 'Khóa tài khoản (Tính năng chưa kích hoạt)'
+                        }
+                        className={`p-1.5 rounded-md border transition-colors ${
+                          onToggleStatus
+                            ? isLocked
+                              ? 'text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 bg-white border-slate-200 cursor-pointer shadow-2xs'
+                              : 'text-rose-600 hover:text-rose-700 hover:bg-rose-50 bg-white border-slate-200 cursor-pointer shadow-2xs'
+                            : 'text-slate-400 hover:text-slate-600 bg-slate-50 border-transparent hover:bg-slate-100 disabled:opacity-60 disabled:cursor-not-allowed'
                         }`}
                       >
                         {isLocked ? <Unlock className="w-4 h-4" /> : <Lock className="w-4 h-4" />}

@@ -11,6 +11,10 @@ import type {
   AccountQueryParams,
   UpdateAccountRequest,
   UpdateAccountResponse,
+  UpdateAccountRoleRequest,
+  UpdateAccountRoleResponse,
+  UpdateAccountStatusRequest,
+  UpdateAccountStatusResponse,
 } from '../types/account';
 
 // Dữ liệu mẫu chuẩn hợp đồng API để phục vụ kiểm thử và hiển thị giao diện khi Backend đang phát triển
@@ -304,6 +308,162 @@ export const accountService = {
       success: true,
       data: updatedAccount,
       message: 'Cập nhật thông tin tài khoản thành công.',
+    };
+  },
+
+  /**
+   * Cập nhật vai trò người dùng (Story TKNHTTDNB1-152).
+   * Gửi request PATCH đến /admin/accounts/:id/role.
+   */
+  updateAccountRole: async (
+    id: string | number,
+    data: UpdateAccountRoleRequest
+  ): Promise<UpdateAccountRoleResponse> => {
+    try {
+      const response = await axiosClient.patch<UpdateAccountRoleResponse>(
+        `/admin/accounts/${id}/role`,
+        data
+      );
+
+      if (response.data && response.data.data) {
+        const updatedIndex = mockAccountsStorage.findIndex(
+          (acc) => String(acc.id) === String(id)
+        );
+        if (updatedIndex !== -1) {
+          mockAccountsStorage[updatedIndex] = {
+            ...mockAccountsStorage[updatedIndex],
+            ...response.data.data,
+          };
+        }
+        return response.data;
+      }
+
+      return accountService.updateMockAccountRole(id, data);
+    } catch (error: unknown) {
+      if (typeof error === 'object' && error !== null && 'response' in error) {
+        const axiosErr = error as { response?: { status?: number; data?: BackendErrorPayload } };
+        const status = axiosErr.response?.status;
+        const errData = axiosErr.response?.data;
+
+        if (status === 400 || status === 403 || status === 422) {
+          const detailedMessage =
+            errData?.message || 'Không thể cập nhật vai trò cho tài khoản này.';
+          throw new Error(detailedMessage, { cause: error });
+        }
+
+        if (status === 404) {
+          return accountService.updateMockAccountRole(id, data);
+        }
+      }
+
+      return accountService.updateMockAccountRole(id, data);
+    }
+  },
+
+  /**
+   * Cập nhật vai trò trong bộ nhớ mock phục vụ Dev/Test
+   */
+  updateMockAccountRole: async (
+    id: string | number,
+    data: UpdateAccountRoleRequest
+  ): Promise<UpdateAccountRoleResponse> => {
+    await new Promise((resolve) => setTimeout(resolve, 200));
+
+    const accountIndex = mockAccountsStorage.findIndex((acc) => String(acc.id) === String(id));
+    if (accountIndex === -1) {
+      throw new Error(`Không tìm thấy tài khoản có mã "${id}" để cập nhật vai trò.`);
+    }
+
+    const updatedAccount: Account = {
+      ...mockAccountsStorage[accountIndex],
+      role: data.role,
+    };
+
+    mockAccountsStorage[accountIndex] = updatedAccount;
+
+    return {
+      success: true,
+      data: updatedAccount,
+      message: `Cập nhật vai trò thành công sang ${data.role}.`,
+    };
+  },
+
+  /**
+   * Cập nhật trạng thái Khóa/Mở khóa tài khoản (Story TKNHTTDNB1-161).
+   * Gửi request PATCH đến /admin/accounts/:id/status.
+   */
+  updateAccountStatus: async (
+    id: string | number,
+    data: UpdateAccountStatusRequest
+  ): Promise<UpdateAccountStatusResponse> => {
+    try {
+      const response = await axiosClient.patch<UpdateAccountStatusResponse>(
+        `/admin/accounts/${id}/status`,
+        data
+      );
+
+      if (response.data && response.data.data) {
+        const updatedIndex = mockAccountsStorage.findIndex(
+          (acc) => String(acc.id) === String(id)
+        );
+        if (updatedIndex !== -1) {
+          mockAccountsStorage[updatedIndex] = {
+            ...mockAccountsStorage[updatedIndex],
+            ...response.data.data,
+          };
+        }
+        return response.data;
+      }
+
+      return accountService.updateMockAccountStatus(id, data);
+    } catch (error: unknown) {
+      if (typeof error === 'object' && error !== null && 'response' in error) {
+        const axiosErr = error as { response?: { status?: number; data?: BackendErrorPayload } };
+        const status = axiosErr.response?.status;
+        const errData = axiosErr.response?.data;
+
+        if (status === 400 || status === 403 || status === 422) {
+          const detailedMessage =
+            errData?.message || 'Không thể thay đổi trạng thái của tài khoản này.';
+          throw new Error(detailedMessage, { cause: error });
+        }
+
+        if (status === 404) {
+          return accountService.updateMockAccountStatus(id, data);
+        }
+      }
+
+      return accountService.updateMockAccountStatus(id, data);
+    }
+  },
+
+  /**
+   * Cập nhật trạng thái trong bộ nhớ mock phục vụ Dev/Test
+   */
+  updateMockAccountStatus: async (
+    id: string | number,
+    data: UpdateAccountStatusRequest
+  ): Promise<UpdateAccountStatusResponse> => {
+    await new Promise((resolve) => setTimeout(resolve, 200));
+
+    const accountIndex = mockAccountsStorage.findIndex((acc) => String(acc.id) === String(id));
+    if (accountIndex === -1) {
+      throw new Error(`Không tìm thấy tài khoản có mã "${id}" để cập nhật trạng thái.`);
+    }
+
+    const updatedAccount: Account = {
+      ...mockAccountsStorage[accountIndex],
+      status: data.status,
+    };
+
+    mockAccountsStorage[accountIndex] = updatedAccount;
+
+    const actionText = data.status === 'LOCKED' ? 'Khóa' : 'Mở khóa';
+
+    return {
+      success: true,
+      data: updatedAccount,
+      message: `${actionText} tài khoản thành công.`,
     };
   },
 

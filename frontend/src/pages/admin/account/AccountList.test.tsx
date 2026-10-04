@@ -3,8 +3,19 @@ import userEvent from '@testing-library/user-event';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { AccountList } from './AccountList';
 import { accountService } from '../../../services/accountService';
+import { AuthProvider } from '../../../context/AuthProvider';
+import type { AuthUser } from '../../../context/AuthContext';
 import type { AccountListResponse } from '../../../types/account';
 
+// Dữ liệu người dùng quản trị viên giả lập để phục vụ kiểm thử quyền
+const MOCK_ADMIN_USER: AuthUser = {
+  id: 'admin-999',
+  name: 'Quản trị viên hệ thống',
+  role: 'ADMIN',
+  permissions: ['ADMIN', 'MANAGE_USERS'],
+};
+
+// Dữ liệu danh sách tài khoản mẫu trả về từ API
 const MOCK_RESPONSE: AccountListResponse = {
   success: true,
   data: [
@@ -35,7 +46,18 @@ const MOCK_RESPONSE: AccountListResponse = {
   },
 };
 
-describe('AccountList Page (TKNHTTDNB1-142, TKNHTTDNB1-144, TKNHTTDNB1-150, TKNHTTDNB1-160)', () => {
+/**
+ * Hàm tiện ích hỗ trợ render AccountList bọc trong AuthProvider
+ */
+const renderAccountList = (authUser: AuthUser | null = MOCK_ADMIN_USER): ReturnType<typeof render> => {
+  return render(
+    <AuthProvider user={authUser}>
+      <AccountList />
+    </AuthProvider>
+  );
+};
+
+describe('AccountList Page (TKNHTTDNB1-142, TKNHTTDNB1-144, TKNHTTDNB1-150, TKNHTTDNB1-152, TKNHTTDNB1-160, TKNHTTDNB1-161)', () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
@@ -43,7 +65,7 @@ describe('AccountList Page (TKNHTTDNB1-142, TKNHTTDNB1-144, TKNHTTDNB1-150, TKNH
   it('1. Hiển thị bảng danh sách tài khoản với đầy đủ các cột và dữ liệu (TKNHTTDNB1-142)', async () => {
     vi.spyOn(accountService, 'getAccounts').mockResolvedValueOnce(MOCK_RESPONSE);
 
-    render(<AccountList />);
+    renderAccountList();
 
     // Kiểm tra tiêu đề trang
     expect(screen.getByText('Danh Sách Tài Khoản')).toBeInTheDocument();
@@ -58,8 +80,7 @@ describe('AccountList Page (TKNHTTDNB1-142, TKNHTTDNB1-144, TKNHTTDNB1-150, TKNH
     expect(screen.getByText('an.nguyen@company.com')).toBeInTheDocument();
     expect(screen.getByText('Quản trị viên')).toBeInTheDocument();
 
-    // Kiểm tra tài khoản thứ 2
-    expect(screen.getByText('acc-002')).toBeInTheDocument();
+    // Dòng thứ 2
     expect(screen.getByText('Lê Hoàng Nam')).toBeInTheDocument();
     expect(screen.getByText('nam.le@company.com')).toBeInTheDocument();
   });
@@ -67,32 +88,46 @@ describe('AccountList Page (TKNHTTDNB1-142, TKNHTTDNB1-144, TKNHTTDNB1-150, TKNH
   it('2. Hiển thị trạng thái Hoạt động và Đã khóa trực quan theo TKNHTTDNB1-160', async () => {
     vi.spyOn(accountService, 'getAccounts').mockResolvedValueOnce(MOCK_RESPONSE);
 
-    render(<AccountList />);
-
-    await waitFor(() => {
-      expect(screen.getByTestId('status-badge-active')).toBeInTheDocument();
-      expect(screen.getByTestId('status-badge-locked')).toBeInTheDocument();
-    });
-  });
-
-  it('3. Kích hoạt nút Chỉnh sửa tài khoản (TKNHTTDNB1-144) trong khi các nút Role, Lock/Unlock vẫn bảo lưu', async () => {
-    vi.spyOn(accountService, 'getAccounts').mockResolvedValueOnce(MOCK_RESPONSE);
-
-    render(<AccountList />);
+    renderAccountList();
 
     await waitFor(() => {
       expect(screen.getByText('Nguyễn Văn An')).toBeInTheDocument();
     });
 
-    // Nút Chỉnh sửa tài khoản đã được kích hoạt theo Story TKNHTTDNB1-144
+    // Tài khoản 1: ACTIVE -> badge Hoạt động
+    const activeBadge = screen.getByTestId('status-badge-active');
+    expect(activeBadge).toBeInTheDocument();
+    expect(activeBadge).toHaveTextContent('Hoạt động');
+
+    // Tài khoản 2: LOCKED -> badge Đã khóa
+    const lockedBadge = screen.getByTestId('status-badge-locked');
+    expect(lockedBadge).toBeInTheDocument();
+    expect(lockedBadge).toHaveTextContent('Đã khóa');
+  });
+
+  it('3. Kích hoạt đầy đủ các nút hành động (Chỉnh sửa, Phân quyền Role, Khóa/Mở khóa) cho Quản trị viên', async () => {
+    vi.spyOn(accountService, 'getAccounts').mockResolvedValueOnce(MOCK_RESPONSE);
+
+    renderAccountList();
+
+    await waitFor(() => {
+      expect(screen.getByText('Nguyễn Văn An')).toBeInTheDocument();
+    });
+
+    // 1. Nút Chỉnh sửa tài khoản (TKNHTTDNB1-144)
     const editButtons = screen.getAllByLabelText(/Chỉnh sửa tài khoản/i);
     expect(editButtons.length).toBeGreaterThan(0);
     expect(editButtons[0]).not.toBeDisabled();
 
-    // Các nút Role vẫn disabled để chờ story tiếp theo
-    const roleButtons = screen.getAllByLabelText(/Phân quyền vai trò/i);
+    // 2. Nút Phân quyền vai trò (TKNHTTDNB1-152)
+    const roleButtons = screen.getAllByLabelText(/Phân quyền vai trò cho/i);
     expect(roleButtons.length).toBeGreaterThan(0);
-    expect(roleButtons[0]).toBeDisabled();
+    expect(roleButtons[0]).not.toBeDisabled();
+
+    // 3. Nút Khóa / Mở khóa tài khoản (TKNHTTDNB1-161)
+    const lockButtons = screen.getAllByLabelText(/Khóa tài khoản|Mở khóa tài khoản/i);
+    expect(lockButtons.length).toBeGreaterThan(0);
+    expect(lockButtons[0]).not.toBeDisabled();
   });
 
   it('4. Tìm kiếm tài khoản theo họ tên / email (TKNHTTDNB1-150)', async () => {
@@ -100,7 +135,7 @@ describe('AccountList Page (TKNHTTDNB1-142, TKNHTTDNB1-144, TKNHTTDNB1-150, TKNH
       .spyOn(accountService, 'getAccounts')
       .mockResolvedValue(MOCK_RESPONSE);
 
-    render(<AccountList />);
+    renderAccountList();
 
     await waitFor(() => {
       expect(screen.getByText('Nguyễn Văn An')).toBeInTheDocument();
@@ -138,7 +173,7 @@ describe('AccountList Page (TKNHTTDNB1-142, TKNHTTDNB1-144, TKNHTTDNB1-150, TKNH
       .spyOn(accountService, 'getAccounts')
       .mockResolvedValue(multiPageResponse);
 
-    render(<AccountList />);
+    renderAccountList();
 
     await waitFor(() => {
       expect(screen.getAllByText('12').length).toBeGreaterThanOrEqual(1);
@@ -174,7 +209,7 @@ describe('AccountList Page (TKNHTTDNB1-142, TKNHTTDNB1-144, TKNHTTDNB1-150, TKNH
 
     vi.spyOn(accountService, 'getAccounts').mockResolvedValueOnce(emptyResponse);
 
-    render(<AccountList />);
+    renderAccountList();
 
     await waitFor(() => {
       expect(screen.getByText('Không tìm thấy tài khoản nào')).toBeInTheDocument();
@@ -187,7 +222,7 @@ describe('AccountList Page (TKNHTTDNB1-142, TKNHTTDNB1-144, TKNHTTDNB1-150, TKNH
       .mockRejectedValueOnce(new Error('Mất kết nối mạng'))
       .mockResolvedValueOnce(MOCK_RESPONSE);
 
-    render(<AccountList />);
+    renderAccountList();
 
     await waitFor(() => {
       expect(screen.getByText('Không thể tải danh sách tài khoản')).toBeInTheDocument();
@@ -216,7 +251,7 @@ describe('AccountList Page (TKNHTTDNB1-142, TKNHTTDNB1-144, TKNHTTDNB1-150, TKNH
       message: 'Cập nhật thông tin tài khoản thành công.',
     });
 
-    render(<AccountList />);
+    renderAccountList();
 
     await waitFor(() => {
       expect(screen.getByText('Nguyễn Văn An')).toBeInTheDocument();
@@ -265,7 +300,7 @@ describe('AccountList Page (TKNHTTDNB1-142, TKNHTTDNB1-144, TKNHTTDNB1-150, TKNH
       .spyOn(accountService, 'getAccounts')
       .mockResolvedValue(MOCK_RESPONSE);
 
-    render(<AccountList />);
+    renderAccountList();
 
     await waitFor(() => {
       expect(screen.getByText('Nguyễn Văn An')).toBeInTheDocument();
@@ -282,5 +317,125 @@ describe('AccountList Page (TKNHTTDNB1-142, TKNHTTDNB1-144, TKNHTTDNB1-150, TKNH
         })
       );
     });
+  });
+
+  it('10. Mở modal phân quyền vai trò, chọn vai trò mới và lưu thành công (TKNHTTDNB1-152)', async () => {
+    vi.spyOn(accountService, 'getAccounts').mockResolvedValue(MOCK_RESPONSE);
+    const updateRoleSpy = vi.spyOn(accountService, 'updateAccountRole').mockResolvedValueOnce({
+      success: true,
+      data: {
+        ...MOCK_RESPONSE.data[1],
+        role: 'HR',
+      },
+      message: 'Cập nhật vai trò người dùng thành công.',
+    });
+
+    renderAccountList();
+
+    await waitFor(() => {
+      expect(screen.getByText('Lê Hoàng Nam')).toBeInTheDocument();
+    });
+
+    // Bấm nút phân quyền vai trò cho tài khoản thứ 2 (Lê Hoàng Nam, hiện là EMPLOYEE)
+    const roleButton = screen.getByLabelText(/Phân quyền vai trò cho Lê Hoàng Nam/i);
+    fireEvent.click(roleButton);
+
+    // Modal xuất hiện
+    await waitFor(() => {
+      expect(screen.getByRole('heading', { name: 'Phân Quyền Vai Trò' })).toBeInTheDocument();
+    });
+
+    // Chọn vai trò HR
+    const hrRadio = screen.getByLabelText(/Nhân sự \(HR\)/i);
+    fireEvent.click(hrRadio);
+
+    // Bấm nút Cập nhật vai trò
+    const submitButton = screen.getByRole('button', { name: /Cập nhật vai trò/i });
+    fireEvent.click(submitButton);
+
+    await waitFor(() => {
+      expect(updateRoleSpy).toHaveBeenCalledWith('acc-002', { role: 'HR' });
+      // Modal đóng lại
+      expect(screen.queryByRole('heading', { name: 'Phân Quyền Vai Trò' })).not.toBeInTheDocument();
+      // Hiển thị thông báo thành công
+      expect(screen.getByText('Cập nhật vai trò người dùng thành công.')).toBeInTheDocument();
+    });
+  });
+
+  it('11. Mở modal xác nhận Khóa tài khoản và thực hiện thành công (TKNHTTDNB1-161)', async () => {
+    vi.spyOn(accountService, 'getAccounts').mockResolvedValue(MOCK_RESPONSE);
+    const updateStatusSpy = vi.spyOn(accountService, 'updateAccountStatus').mockResolvedValueOnce({
+      success: true,
+      data: {
+        ...MOCK_RESPONSE.data[0],
+        status: 'LOCKED',
+      },
+      message: 'Khóa tài khoản thành công.',
+    });
+
+    renderAccountList();
+
+    await waitFor(() => {
+      expect(screen.getByText('Nguyễn Văn An')).toBeInTheDocument();
+    });
+
+    // Bấm nút Khóa tài khoản của Nguyễn Văn An (hiện tại ACTIVE)
+    const lockButton = screen.getByLabelText('Khóa tài khoản Nguyễn Văn An');
+    fireEvent.click(lockButton);
+
+    // Modal xác nhận xuất hiện
+    await waitFor(() => {
+      expect(screen.getByRole('heading', { name: 'Khóa Tài Khoản' })).toBeInTheDocument();
+    });
+
+    // Kiểm tra thông tin tài khoản hiển thị trong modal
+    expect(screen.getByText('Mã tài khoản: acc-001')).toBeInTheDocument();
+    expect(screen.getAllByText('an.nguyen@company.com').length).toBeGreaterThanOrEqual(2);
+
+    // Bấm nút Xác nhận khóa
+    const confirmButton = screen.getByRole('button', { name: 'Xác nhận khóa' });
+    fireEvent.click(confirmButton);
+
+    await waitFor(() => {
+      expect(updateStatusSpy).toHaveBeenCalledWith('acc-001', { status: 'LOCKED' });
+      // Modal đóng lại
+      expect(screen.queryByRole('heading', { name: 'Khóa Tài Khoản' })).not.toBeInTheDocument();
+      // Hiển thị thông báo thành công
+      expect(screen.getByText('Khóa tài khoản thành công.')).toBeInTheDocument();
+    });
+  });
+
+  it('12. Chặn tự khóa tài khoản của chính quản trị viên đang đăng nhập (TKNHTTDNB1-161)', async () => {
+    // Giả lập admin đăng nhập có ID trùng với Nguyễn Văn An (acc-001)
+    const selfAdmin: AuthUser = {
+      id: 'acc-001',
+      name: 'Nguyễn Văn An',
+      role: 'ADMIN',
+      permissions: ['ADMIN'],
+    };
+
+    vi.spyOn(accountService, 'getAccounts').mockResolvedValue(MOCK_RESPONSE);
+
+    renderAccountList(selfAdmin);
+
+    await waitFor(() => {
+      expect(screen.getByText('Nguyễn Văn An')).toBeInTheDocument();
+    });
+
+    // Bấm nút Khóa tài khoản của chính mình
+    const lockButton = screen.getByLabelText('Khóa tài khoản Nguyễn Văn An');
+    fireEvent.click(lockButton);
+
+    // Modal hiển thị cảnh báo chặn hành động
+    await waitFor(() => {
+      expect(screen.getByText('Hành động bị chặn')).toBeInTheDocument();
+      expect(
+        screen.getByText(/Hệ thống không cho phép người quản trị tự khóa tài khoản của chính mình/i)
+      ).toBeInTheDocument();
+    });
+
+    // Nút xác nhận bị disable
+    const confirmButton = screen.getByRole('button', { name: 'Xác nhận khóa' });
+    expect(confirmButton).toBeDisabled();
   });
 });

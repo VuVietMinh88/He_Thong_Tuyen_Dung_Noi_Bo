@@ -122,3 +122,88 @@
 - **HTTP 404 Not Found:** Không tìm thấy tài khoản với ID yêu cầu.
 - **HTTP 500 Internal Server Error:** Lỗi phía máy chủ cơ sở dữ liệu.
 
+---
+
+## 3. Endpoint: Cập nhật vai trò tài khoản (TKNHTTDNB1-152)
+
+- **Method:** `PATCH`
+- **Path:** `/api/admin/accounts/{id}/role`
+- **Xác thực:** Bearer Token (`Authorization: Bearer <accessToken>`)
+- **Yêu cầu quyền:** Role `ADMIN`
+
+### Path Parameters
+| Tham số | Kiểu dữ liệu | Bắt buộc | Mô tả |
+| :--- | :--- | :--- | :--- |
+| `id` | `string` / `number` | Có | Mã định danh tài khoản cần phân quyền vai trò |
+
+### Request Body (JSON)
+| Trường | Kiểu dữ liệu | Bắt buộc | Giá trị hợp lệ |
+| :--- | :--- | :--- | :--- |
+| `role` | `string` | Có | `ADMIN`, `HR`, `INTERVIEWER`, `EMPLOYEE` |
+
+```json
+{
+  "role": "HR"
+}
+```
+
+### Response Thành công (HTTP 200 OK)
+```json
+{
+  "success": true,
+  "data": {
+    "id": "acc-001",
+    "fullName": "Nguyễn Văn An",
+    "email": "an.nguyen@company.com",
+    "role": "HR",
+    "status": "ACTIVE",
+    "createdAt": "2026-01-15T08:30:00Z",
+    "lastLoginAt": "2026-10-01T14:20:00Z"
+  },
+  "message": "Cập nhật vai trò tài khoản thành công."
+}
+```
+
+---
+
+## 4. Endpoint: Khóa / Mở khóa tài khoản (TKNHTTDNB1-160, TKNHTTDNB1-161)
+
+- **Method:** `PATCH`
+- **Path:** `/api/admin/accounts/{id}/status`
+- **Xác thực:** Bearer Token (`Authorization: Bearer <accessToken>`)
+- **Yêu cầu quyền:** Role `ADMIN`
+
+### Path Parameters
+| Tham số | Kiểu dữ liệu | Bắt buộc | Mô tả |
+| :--- | :--- | :--- | :--- |
+| `id` | `string` / `number` | Có | Mã định danh tài khoản cần thay đổi trạng thái |
+
+### Request Body (JSON)
+| Trường | Kiểu dữ liệu | Bắt buộc | Giá trị hợp lệ |
+| :--- | :--- | :--- | :--- |
+| `status` | `string` | Có | `ACTIVE` (Mở khóa) hoặc `LOCKED` (Khóa) |
+
+```json
+{
+  "status": "LOCKED"
+}
+```
+
+### Response Thành công (HTTP 200 OK)
+```json
+{
+  "success": true,
+  "data": {
+    "id": "acc-001",
+    "fullName": "Nguyễn Văn An",
+    "email": "an.nguyen@company.com",
+    "role": "ADMIN",
+    "status": "LOCKED",
+    "createdAt": "2026-01-15T08:30:00Z",
+    "lastLoginAt": "2026-10-01T14:20:00Z"
+  },
+  "message": "Khóa tài khoản thành công."
+}
+```
+
+
