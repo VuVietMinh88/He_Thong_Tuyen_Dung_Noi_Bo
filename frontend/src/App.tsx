@@ -11,12 +11,17 @@ import { MainLayout } from './components/MainLayout';
 import { ProtectedRoute } from './components/routes/ProtectedRoute';
 import { ExampleUsage } from './components/ExampleUsage';
 import { AccountList } from './pages/admin/account/AccountList';
+import { UserManagementPage } from './pages/admin/UserManagementPage';
+
+import { RecruitmentPage } from './pages/recruitment/RecruitmentPage';
+import { SalaryReportPage } from './pages/reports/SalaryReportPage';
+import { SystemSettingsPage } from './pages/settings/SystemSettingsPage';
 
 const App: React.FC = () => {
   return (
     <BrowserRouter>
       <Routes>
-        <Route path="/" element={<Navigate to="/login" replace />} />
+        <Route path="/" element={<Navigate to="/dashboard" replace />} />
 
         {/* Các Route không cần Layout nội bộ (Auth Pages) */}
         <Route path="/login" element={<LoginPage />} />
@@ -43,48 +48,27 @@ const App: React.FC = () => {
             <Route element={<ProtectedRoute allowedRoles={['ADMIN']} />}>
               <Route path="/admin/accounts" element={<AccountList />} />
               <Route path="/accounts" element={<AccountList />} />
+              
+              {/* Cấu hình hệ thống - Chỉ ADMIN */}
+              <Route path="/settings/system" element={<SystemSettingsPage />} />
             </Route>
             
             {/* Trang Quản lý nhân sự dành cho ADMIN / HR */}
-            <Route 
-              element={<ProtectedRoute allowedRoles={['ADMIN', 'HR']} />}
-            >
-              <Route
-                path="/employees"
-                element={
-                  <div className="bg-white p-6 rounded-lg shadow-sm">
-                    <h1 className="text-2xl font-bold text-blue-800 mb-4">Trang Quản Lý Nhân Sự</h1>
-                    <p>Danh sách nhân sự sẽ hiển thị ở đây...</p>
-                  </div>
-                }
-              />
+            <Route element={<ProtectedRoute allowedRoles={['ADMIN', 'HR']} />}>
+              <Route path="/employees" element={<UserManagementPage />} />
             </Route>
 
             {/* Trang sử dụng ExampleUsage để test PermissionGuard */}
-            <Route 
-              path="/settings/security" 
-              element={<ExampleUsage />} 
-            />
+            <Route path="/settings/security" element={<ExampleUsage />} />
 
             {/* Tuyển dụng */}
-            <Route 
-              path="/recruitment" 
-              element={<div className="p-4">Tính năng đang phát triển...</div>} 
-            />
+            <Route path="/recruitment" element={<RecruitmentPage />} />
 
             {/* Báo cáo lương */}
             <Route element={<ProtectedRoute requiredPermissions={['VIEW_SALARY_REPORT']} />}>
-              <Route
-                path="/reports/salary"
-                element={<div className="p-4">Tính năng báo cáo lương đang phát triển...</div>}
-              />
+              <Route path="/reports/salary" element={<SalaryReportPage />} />
             </Route>
 
-            {/* Cấu hình hệ thống */}
-            <Route 
-              path="/settings/system" 
-              element={<div className="p-4">Cấu hình hệ thống đang phát triển...</div>} 
-            />
           </Route>
         </Route>
 

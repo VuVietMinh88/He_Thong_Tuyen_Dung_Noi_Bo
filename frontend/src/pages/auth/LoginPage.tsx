@@ -4,7 +4,7 @@ import { Mail, Lock, Eye, EyeOff, ShieldCheck, AlertCircle, Clock, Loader2 } fro
 import { useAuth, type AuthUser } from '../../context/AuthContext';
 // import { authService } from '../../services/authService'; // Đã giữ comment bằng tiếng Việt, sẽ bỏ khi nối API thật
 
-type LoginState = 'normal' | 'error' | 'lockout' | 'loading';
+type LoginState = 'normal' | 'error' | 'lockout' | 'loading' | 'success';
 
 const MOCK_USERS: Record<string, AuthUser> = {
   'admin@gmail.com': {
@@ -27,6 +27,9 @@ const MOCK_USERS: Record<string, AuthUser> = {
   },
 };
 
+const MAX_FAILED_ATTEMPTS = 5;
+const LOCKOUT_DURATION_MS = 15 * 60 * 1000; // 15 phút
+
 export const LoginPage: React.FC = () => {
   const navigate = useNavigate();
   const { signIn } = useAuth();
@@ -39,9 +42,55 @@ export const LoginPage: React.FC = () => {
   const [rememberMe, setRememberMe] = useState<boolean>(false);
   const [showPassword, setShowPassword] = useState<boolean>(false);
 
+  // Quản lý số lần đăng nhập sai (Lưu vào localStorage để chống F5)
+  const [failedAttempts, setFailedAttempts] = useState<number>(() => {
+    return parseInt(localStorage.getItem('login_failed_attempts') || '0', 10);
+  });
+
+  // Quản lý thời gian mở khóa (Lưu timestamp vào localStorage)
+  const [lockoutUntil, setLockoutUntil] = useState<number | null>(() => {
+    const stored = localStorage.getItem('login_lockout_until');
+    return stored ? parseInt(stored, 10) : null;
+  });
+
+  // Trạng thái đếm ngược thời gian khóa hiển thị trên giao diện
+  const [remainingTime, setRemainingTime] = useState<string>('');
+
+  // Effect chạy đồng hồ đếm ngược nếu tài khoản đang bị khóa
+  React.useEffect(() => {
+    if (!lockoutUntil) return;
+
+    const updateCountdown = () => {
+      const now = Date.now();
+      if (now >= lockoutUntil) {
+        // Đã hết thời gian khóa
+        setLockoutUntil(null);
+        setFailedAttempts(0);
+        setAppState('normal');
+        localStorage.removeItem('login_lockout_until');
+        localStorage.removeItem('login_failed_attempts');
+      } else {
+        // Vẫn đang trong thời gian khóa
+        setAppState('lockout');
+        const diff = lockoutUntil - now;
+        const minutes = Math.floor(diff / 60000);
+        const seconds = Math.floor((diff % 60000) / 1000);
+        setRemainingTime(`${minutes} phút ${seconds} giây`);
+      }
+    };
+
+    updateCountdown(); // Gọi ngay lập tức 1 lần
+    const intervalId = setInterval(updateCountdown, 1000);
+
+    return () => clearInterval(intervalId);
+  }, [lockoutUntil]);
+
   const handleLogin = async (e: React.FormEvent<HTMLFormElement>): Promise<void> => {
     e.preventDefault();
     if (!email.trim() || !password) return;
+    
+    // Khóa cấp 2: Ngăn chặn submit nếu vẫn đang bị khóa
+    if (lockoutUntil && Date.now() < lockoutUntil) return;
 
     setAppState('loading');
     setErrorMessage('');
@@ -53,22 +102,38 @@ export const LoginPage: React.FC = () => {
       const authenticatedUser = MOCK_USERS[email.trim().toLowerCase()];
 
       if (authenticatedUser && password === '123456') {
+        // Nếu đăng nhập thành công, xóa trắng lịch sử sai
+        setFailedAttempts(0);
+        localStorage.removeItem('login_failed_attempts');
+        localStorage.removeItem('login_lockout_until');
+
         signIn(authenticatedUser);
-        // Thành công: Chuyển hướng theo AC Jira
-        navigate('/dashboard');
+        
+        // Cập nhật trạng thái thành công để hiện alert ở trang login
+        setAppState('success');
+        
+        // Chờ 1 giây để người dùng thấy thông báo, sau đó chuyển hướng và gửi kèm state
+        setTimeout(() => {
+          navigate('/dashboard', { state: { loginSuccess: true } });
+        }, 1000);
       } else {
-        // Thất bại: Cố tình throw lỗi để block catch xử lý
+        // Thất bại: Ném lỗi để block catch xử lý
         throw new Error('INVALID_CREDENTIALS');
       }
     } catch (err: unknown) {
-      // AC JIRA: CHỈ hiển thị 1 thông báo chung, không tiết lộ email
-      setAppState('error');
-      setErrorMessage('Email hoặc mật khẩu không chính xác. Vui lòng kiểm tra lại.');
-      
-      // Giả lập logic khóa (Lockout) nếu cần
-      if (err instanceof Error && err.message === 'LOCKOUT') {
-        setAppState('lockout');
-        setErrorMessage('Tài khoản của bạn tạm thời bị khóa 15 phút do nhập sai 5 lần liên tiếp.');
+      const newAttempts = failedAttempts + 1;
+      setFailedAttempts(newAttempts);
+      localStorage.setItem('login_failed_attempts', newAttempts.toString());
+
+      if (newAttempts >= MAX_FAILED_ATTEMPTS) {
+        // Vượt quá 5 lần -> Kích hoạt khóa 15 phút
+        const unlockTime = Date.now() + LOCKOUT_DURATION_MS;
+        setLockoutUntil(unlockTime);
+        localStorage.setItem('login_lockout_until', unlockTime.toString());
+      } else {
+        // Chưa quá 5 lần -> Báo lỗi số lần còn lại
+        setAppState('error');
+        setErrorMessage(`Email hoặc mật khẩu không chính xác. Bạn còn ${MAX_FAILED_ATTEMPTS - newAttempts} lần thử.`);
       }
     } finally {
       setAppState((prev) => (prev === 'loading' ? 'normal' : prev));
@@ -123,10 +188,23 @@ export const LoginPage: React.FC = () => {
             </div>
           )}
 
+          {/* Thông báo thành công */}
+          {appState === 'success' && (
+            <div className="mb-6 p-3 bg-emerald-50 border border-emerald-100 rounded-lg flex items-start gap-2.5 text-emerald-600 animate-in fade-in">
+              <ShieldCheck className="w-5 h-5 flex-shrink-0"/>
+              <p className="text-sm font-medium leading-tight">Đăng nhập thành công! Đang chuyển hướng...</p>
+            </div>
+          )}
+
           {appState === 'lockout' && (
-            <div className="mb-6 p-3 bg-orange-50 border border-orange-100 rounded-lg flex items-start gap-2.5 text-orange-700 animate-in fade-in">
-              <Clock className="w-5 h-5 flex-shrink-0"/>
-              <p className="text-sm font-medium leading-tight">{errorMessage}</p>
+            <div className="mb-6 p-4 bg-orange-50 border border-orange-200 rounded-lg flex items-start gap-3 text-orange-700 animate-in fade-in shadow-sm">
+              <Clock className="w-5 h-5 flex-shrink-0 mt-0.5 text-orange-500" />
+              <div>
+                <p className="text-[15px] font-bold leading-tight">Tài khoản bị tạm khóa</p>
+                <p className="text-sm font-medium mt-1">
+                  Bạn đã nhập sai 5 lần. Vui lòng thử lại sau: <span className="text-red-600 font-bold">{remainingTime}</span>
+                </p>
+              </div>
             </div>
           )}
 
@@ -144,7 +222,7 @@ export const LoginPage: React.FC = () => {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   disabled={appState === 'lockout' || appState === 'loading'}
-                  className="block w-full pl-10 pr-4 py-2.5 text-sm rounded-lg border border-slate-200 focus:ring-2 focus:ring-[#0f766e]/20 focus:border-[#0f766e] outline-none transition-all disabled:bg-slate-50"
+                  className="block w-full pl-10 pr-4 py-2.5 text-sm rounded-lg border border-slate-200 focus:ring-2 focus:ring-[#0f766e]/20 focus:border-[#0f766e] outline-none transition-all disabled:bg-slate-100 disabled:cursor-not-allowed disabled:text-slate-400"
                   placeholder="admin@gmail.com"
                   required
                 />
@@ -163,7 +241,7 @@ export const LoginPage: React.FC = () => {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   disabled={appState === 'lockout' || appState === 'loading'}
-                  className="block w-full pl-10 pr-10 py-2.5 text-sm rounded-lg border border-slate-200 focus:ring-2 focus:ring-[#0f766e]/20 focus:border-[#0f766e] outline-none transition-all disabled:bg-slate-50"
+                  className="block w-full pl-10 pr-10 py-2.5 text-sm rounded-lg border border-slate-200 focus:ring-2 focus:ring-[#0f766e]/20 focus:border-[#0f766e] outline-none transition-all disabled:bg-slate-100 disabled:cursor-not-allowed disabled:text-slate-400"
                   placeholder="••••••••"
                   required
                 />

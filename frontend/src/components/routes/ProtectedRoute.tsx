@@ -26,7 +26,17 @@ export const ProtectedRoute = ({
 	const hasRequiredPermission = !requiredPermissions?.length
 		|| hasAllPermissions(requiredPermissions);
 
-	if (!isAuthenticated || !hasAllowedRole || !hasRequiredPermission) {
+	if (!isAuthenticated) {
+		return (
+			<Navigate
+				to="/login"
+				replace
+				state={{ from: location }}
+			/>
+		);
+	}
+
+	if (!hasAllowedRole || !hasRequiredPermission) {
 		return (
 			<Navigate
 				to={redirectPath}

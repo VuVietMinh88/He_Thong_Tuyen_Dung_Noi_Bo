@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { ArrowLeft, CheckCircle2, Loader2, Mail, ShieldCheck } from 'lucide-react';
+import { ArrowLeft, CheckCircle2, Loader2, Mail, ShieldCheck, Clock } from 'lucide-react';
 
 // Interface định nghĩa dữ liệu form cho chức năng quên mật khẩu.
 interface ForgotPasswordFormData {
@@ -13,7 +13,10 @@ interface ForgotPasswordFormErrors {
 }
 
 // Kiểu trạng thái của trang để hiển thị loading/success/error.
-type PageStatus = 'idle' | 'loading' | 'success' | 'error';
+type PageStatus = 'idle' | 'loading' | 'success' | 'error' | 'lockout';
+
+const MAX_FAILED_ATTEMPTS = 5;
+const LOCKOUT_DURATION_MS = 15 * 60 * 1000; // 15 phút
 
 export const ForgotPasswordPage: React.FC = () => {
   const navigate = useNavigate();
@@ -23,6 +26,47 @@ export const ForgotPasswordPage: React.FC = () => {
   const [errors, setErrors] = useState<ForgotPasswordFormErrors>({});
   const [pageStatus, setPageStatus] = useState<PageStatus>('idle');
   const [message, setMessage] = useState<string>('');
+
+  // Quản lý số lần nhập sai email (Lưu localStorage)
+  const [failedAttempts, setFailedAttempts] = useState<number>(() => {
+    return parseInt(localStorage.getItem('forgot_failed_attempts') || '0', 10);
+  });
+
+  // Quản lý thời gian mở khóa
+  const [lockoutUntil, setLockoutUntil] = useState<number | null>(() => {
+    const stored = localStorage.getItem('forgot_lockout_until');
+    return stored ? parseInt(stored, 10) : null;
+  });
+
+  // Đếm ngược
+  const [remainingTime, setRemainingTime] = useState<string>('');
+
+  // Effect chạy đồng hồ đếm ngược
+  useEffect(() => {
+    if (!lockoutUntil) return;
+
+    const updateCountdown = () => {
+      const now = Date.now();
+      if (now >= lockoutUntil) {
+        setLockoutUntil(null);
+        setFailedAttempts(0);
+        setPageStatus('idle');
+        setMessage('');
+        localStorage.removeItem('forgot_lockout_until');
+        localStorage.removeItem('forgot_failed_attempts');
+      } else {
+        setPageStatus('lockout');
+        const diff = lockoutUntil - now;
+        const minutes = Math.floor(diff / 60000);
+        const seconds = Math.floor((diff % 60000) / 1000);
+        setRemainingTime(`${minutes} phút ${seconds} giây`);
+      }
+    };
+
+    updateCountdown();
+    const intervalId = setInterval(updateCountdown, 1000);
+    return () => clearInterval(intervalId);
+  }, [lockoutUntil]);
 
   // Hàm validate email theo định dạng cơ bản.
   const validateEmail = (email: string): string | undefined => {
@@ -61,6 +105,8 @@ export const ForgotPasswordPage: React.FC = () => {
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>): Promise<void> => {
     event.preventDefault();
 
+    if (lockoutUntil && Date.now() < lockoutUntil) return;
+
     const nextErrors: ForgotPasswordFormErrors = {};
     const emailError: string | undefined = validateEmail(formData.email);
 
@@ -80,18 +126,43 @@ export const ForgotPasswordPage: React.FC = () => {
     setMessage('');
 
     try {
-      // Giả lập thời gian gửi yêu cầu API trong 1.2 giây để có hiệu ứng loading thực tế.
       await new Promise<void>((resolve: () => void) => {
         window.setTimeout(resolve, 1200);
       });
 
+      const mockValidEmails: string[] = ['admin@company.com', 'hr@company.com', 'user@company.com'];
+      const userEmail: string = formData.email.trim().toLowerCase();
+
+      const isEmailExist: boolean = mockValidEmails.includes(userEmail);
+
+      if (!isEmailExist) {
+        const newAttempts = failedAttempts + 1;
+        setFailedAttempts(newAttempts);
+        localStorage.setItem('forgot_failed_attempts', newAttempts.toString());
+
+        if (newAttempts >= MAX_FAILED_ATTEMPTS) {
+          const unlockTime = Date.now() + LOCKOUT_DURATION_MS;
+          setLockoutUntil(unlockTime);
+          localStorage.setItem('forgot_lockout_until', unlockTime.toString());
+        } else {
+          setPageStatus('error');
+          setMessage(`Email không tồn tại trong hệ thống. Bạn còn ${MAX_FAILED_ATTEMPTS - newAttempts} lần thử.`);
+        }
+        return; 
+      }
+
+      // Xóa lịch sử sai nếu nhập đúng email
+      setFailedAttempts(0);
+      localStorage.removeItem('forgot_failed_attempts');
+      localStorage.removeItem('forgot_lockout_until');
+
       setPageStatus('success');
       setMessage('Mã xác nhận đã được gửi thành công. Vui lòng kiểm tra hộp thư của bạn.');
 
-      // Chuyển hướng người dùng sang trang nhập mã hoặc bước tiếp theo sau khi gửi thành công.
       window.setTimeout(() => {
-        navigate(`/reset-password?email=${encodeURIComponent(formData.email.trim())}`);
-      }, 1200);
+        navigate(`/reset-password?email=${encodeURIComponent(userEmail)}`);
+      }, 1500);
+
     } catch (error: unknown) {
       setPageStatus('error');
       setMessage('Không thể gửi yêu cầu lúc này. Vui lòng thử lại sau.');
@@ -152,6 +223,18 @@ export const ForgotPasswordPage: React.FC = () => {
             </div>
           )}
 
+          {pageStatus === 'lockout' && (
+            <div className="mb-6 p-4 bg-orange-50 border border-orange-200 rounded-lg flex items-start gap-3 text-orange-700 animate-in fade-in shadow-sm">
+              <Clock className="w-5 h-5 flex-shrink-0 mt-0.5 text-orange-500" />
+              <div>
+                <p className="text-[15px] font-bold leading-tight">Tính năng bị tạm khóa</p>
+                <p className="text-sm font-medium mt-1">
+                  Bạn đã nhập sai quá 5 lần. Vui lòng thử lại sau: <span className="text-red-600 font-bold">{remainingTime}</span>
+                </p>
+              </div>
+            </div>
+          )}
+
           <form onSubmit={handleSubmit} className="space-y-5">
             <div className="space-y-1.5">
               <label htmlFor="email" className="block text-xs font-semibold text-slate-600">
@@ -168,8 +251,8 @@ export const ForgotPasswordPage: React.FC = () => {
                   type="email"
                   value={formData.email}
                   onChange={handleInputChange}
-                  disabled={pageStatus === 'loading'}
-                  className={`block w-full pl-10 pr-4 py-2.5 text-sm rounded-lg border outline-none transition-all disabled:bg-slate-50 ${
+                  disabled={pageStatus === 'loading' || pageStatus === 'lockout'}
+                  className={`block w-full pl-10 pr-4 py-2.5 text-sm rounded-lg border outline-none transition-all disabled:bg-slate-100 disabled:cursor-not-allowed disabled:text-slate-400 ${
                     errors.email
                       ? 'border-red-300 focus:ring-red-200 focus:border-red-500'
                       : 'border-slate-200 focus:ring-2 focus:ring-[#0f766e]/20 focus:border-[#0f766e]'
@@ -186,7 +269,7 @@ export const ForgotPasswordPage: React.FC = () => {
 
             <button
               type="submit"
-              disabled={pageStatus === 'loading'}
+              disabled={pageStatus === 'loading' || pageStatus === 'lockout'}
               className="w-full flex justify-center items-center py-2.5 px-4 rounded-lg text-sm font-bold text-white bg-[#0f766e] hover:bg-teal-800 transition-all duration-200 disabled:opacity-70 disabled:cursor-not-allowed shadow-sm"
             >
               {pageStatus === 'loading' ? (

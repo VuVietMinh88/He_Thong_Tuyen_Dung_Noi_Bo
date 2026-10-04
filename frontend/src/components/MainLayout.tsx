@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
-import { Outlet, useNavigate } from 'react-router-dom';
-import { Menu, LogOut, Bell } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Outlet, useNavigate, useLocation } from 'react-router-dom';
+import { Menu, LogOut, Bell, CheckCircle } from 'lucide-react';
 import { SidebarMenu } from './SidebarMenu';
 import { useAuth } from '../context/AuthContext';
 
@@ -11,8 +11,29 @@ import { useAuth } from '../context/AuthContext';
 export const MainLayout: React.FC = () => {
   // Trạng thái đóng/mở sidebar
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  // Trạng thái hiển thị thông báo Toast đăng nhập thành công
+  const [showToast, setShowToast] = useState(false);
+  
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
+
+  // Hiển thị Toast dựa vào state được pass qua navigate từ LoginPage
+  useEffect(() => {
+    if (location.state?.loginSuccess) {
+      setShowToast(true);
+      
+      // Xóa state khỏi history để tránh toast hiện lại khi F5 trang
+      window.history.replaceState({}, document.title);
+      
+      // Tự động ẩn toast sau 4 giây
+      const timer = setTimeout(() => {
+        setShowToast(false);
+      }, 4000);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [location]);
 
   // Hàm xử lý đăng xuất giả lập
   const handleLogout = (): void => {
@@ -21,7 +42,21 @@ export const MainLayout: React.FC = () => {
   };
 
   return (
-    <div className="flex h-screen bg-gray-50 overflow-hidden font-sans">
+    <div className="flex h-screen bg-gray-50 overflow-hidden font-sans relative">
+      
+      {/* Global Toast Thông báo thành công */}
+      {showToast && (
+        <div className="absolute top-6 right-6 z-50 animate-in slide-in-from-top-2 fade-in duration-300">
+          <div className="bg-emerald-50 border border-emerald-200 shadow-lg rounded-lg p-4 flex items-center gap-3">
+            <CheckCircle className="w-6 h-6 text-emerald-500" />
+            <div>
+              <p className="font-semibold text-emerald-800">Đăng nhập thành công</p>
+              <p className="text-sm text-emerald-600">Chào mừng bạn quay lại hệ thống.</p>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Cột trái: Sidebar */}
       <SidebarMenu isCollapsed={isSidebarCollapsed} />
 

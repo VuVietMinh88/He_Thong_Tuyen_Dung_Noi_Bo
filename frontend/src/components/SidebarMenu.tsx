@@ -27,7 +27,7 @@ export interface SidebarMenuProps {
 const MENU_ITEMS: MenuItem[] = [
   {
     label: 'Trang Chủ',
-    path: '/',
+    path: '/dashboard',
     icon: <House className="h-5 w-5" />,
     requiredPermissions: [],
     allowedRoles: [],
