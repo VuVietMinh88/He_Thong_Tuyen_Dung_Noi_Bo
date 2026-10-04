@@ -34,7 +34,8 @@ public class SecurityConfiguration {
             if ("POST".equals(request.getMethod())
                     && ("/api/v1/auth/refresh".equals(request.getServletPath())
                     || "/api/v1/auth/login".equals(request.getServletPath())
-                    || "/api/v1/auth/forgot-password".equals(request.getServletPath()))) {
+                    || "/api/v1/auth/forgot-password".equals(request.getServletPath())
+                    || "/api/v1/auth/reset-password".equals(request.getServletPath()))) {
                 return null;
             }
             return resolver.resolve(request);
@@ -70,7 +71,7 @@ public class SecurityConfiguration {
                         .dispatcherTypeMatchers(DispatcherType.ERROR).permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/health").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/v1/auth/login", "/api/v1/auth/refresh",
-                                "/api/v1/auth/forgot-password").permitAll()
+                                "/api/v1/auth/forgot-password", "/api/v1/auth/reset-password").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/auth/me").authenticated()
                         .requestMatchers(HttpMethod.POST, "/api/v1/auth/logout").authenticated()
                         .anyRequest().denyAll())
