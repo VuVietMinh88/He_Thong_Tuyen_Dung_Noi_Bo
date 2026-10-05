@@ -1,0 +1,14 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "type": "java",
+      "name": "Run TTCS Backend",
+      "request": "launch",
+      "mainClass": "vn.ttcs.recruitment.TtcsBackendApplication",
+      "projectName": "ttcs-backend",
+      "cwd": "${workspaceFolder}/backend",
+      "console": "integratedTerminal"
+    }
+  ]
+}
