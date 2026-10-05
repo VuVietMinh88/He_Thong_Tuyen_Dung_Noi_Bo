@@ -4,6 +4,8 @@ React + TypeScript cho frontend, Java 21 + Spring Boot 4.1.1 cho backend, Postgr
 
 **TKNHTTDNB1-90 — Xây dựng API đăng nhập:** đăng nhập email/mật khẩu, lỗi chung khi sai, khóa 15 phút sau 5 lần sai liên tiếp, trả tên và vai trò. Các API xem tài khoản hiện tại, gia hạn token và đăng xuất hỗ trợ quản lý phiên đăng nhập. Frontend hiện chưa có giao diện.
 
+Backend có thêm tạo/kích hoạt tài khoản, tìm kiếm và cập nhật tài khoản quản trị (145–149), cùng API hồ sơ cá nhân (179–181). V5 bổ sung dữ liệu phòng ban/hồ sơ (148,194), giữ các tài khoản hiện có. Xem [quản trị tài khoản](docs/api/accounts.md) và [hồ sơ cá nhân](docs/api/profile.md) để tích hợp frontend.
+
 ## Bắt đầu
 
 1. Chọn JDK 21, đặt `JAVA_HOME` và kiểm tra `java -version`.
@@ -24,7 +26,7 @@ He_Thong_Tuyen_Dung_Noi_Bo/
 │   ├── .env.example          # Mẫu cấu hình
 │   └── src/
 │       ├── main/java/vn/ttcs/recruitment/
-│       │   ├── account/      # Tài khoản, vai trò, tạo Admin ban đầu
+│       │   ├── account/      # Quản trị tài khoản; profile/ là hồ sơ cá nhân
 │       │   ├── auth/         # API đăng nhập và phiên
 │       │   ├── security/     # BCrypt, JWT, bảo vệ endpoint, CORS
 │       │   ├── common/       # JSON lỗi chung
