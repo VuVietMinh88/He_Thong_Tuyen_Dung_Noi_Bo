@@ -6,6 +6,8 @@ React + TypeScript cho frontend, Java 21 + Spring Boot 4.1.1 cho backend, Postgr
 
 Backend có thêm tạo/kích hoạt tài khoản, tìm kiếm và cập nhật tài khoản quản trị (145–149), cùng API hồ sơ cá nhân (179–181). V5 bổ sung dữ liệu phòng ban/hồ sơ (148,194), giữ các tài khoản hiện có. Xem [quản trị tài khoản](docs/api/accounts.md) và [hồ sơ cá nhân](docs/api/profile.md) để tích hợp frontend.
 
+Admin có thể [gán và thu hồi từng vai trò](docs/api/account-roles.md) (154–158). Quyền thay đổi ở yêu cầu kế tiếp, dùng lại database và cấu hình hiện có.
+
 ## Bắt đầu
 
 1. Chọn JDK 21, đặt `JAVA_HOME` và kiểm tra `java -version`.
