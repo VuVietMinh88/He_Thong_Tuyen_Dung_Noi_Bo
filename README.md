@@ -8,6 +8,8 @@ Backend có thêm tạo/kích hoạt tài khoản, tìm kiếm và cập nhật 
 
 Admin có thể [gán và thu hồi từng vai trò](docs/api/account-roles.md) (154–158). Quyền thay đổi ở yêu cầu kế tiếp, dùng lại database và cấu hình hiện có.
 
+[Khóa/mở khóa tài khoản](docs/api/account-locking.md) (162–166) yêu cầu lý do, chặn truy cập và thu hồi phiên. V6 bổ sung trạng thái khóa riêng, giữ dữ liệu kích hoạt và khóa đăng nhập tạm hiện có.
+
 ## Bắt đầu
 
 1. Chọn JDK 21, đặt `JAVA_HOME` và kiểm tra `java -version`.
