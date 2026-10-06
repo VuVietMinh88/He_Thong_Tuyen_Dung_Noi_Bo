@@ -10,6 +10,8 @@ Admin có thể [gán và thu hồi từng vai trò](docs/api/account-roles.md) 
 
 [Khóa/mở khóa tài khoản](docs/api/account-locking.md) (162–166) yêu cầu lý do, chặn truy cập và thu hồi phiên. V6 bổ sung trạng thái khóa riêng, giữ dữ liệu kích hoạt và khóa đăng nhập tạm hiện có.
 
+HR_MANAGER và ADMIN có thể [quản lý phòng ban và cây tổ chức](docs/api/departments.md) (195–196): tạo/sửa, chọn người phụ trách, ngừng áp dụng và kiểm tra chu trình. Dùng schema V5 hiện có; API xóa phòng ban thuộc task 197 chưa triển khai.
+
 ## Bắt đầu
 
 1. Chọn JDK 21, đặt `JAVA_HOME` và kiểm tra `java -version`.
@@ -32,6 +34,7 @@ He_Thong_Tuyen_Dung_Noi_Bo/
 │       ├── main/java/vn/ttcs/recruitment/
 │       │   ├── account/      # Quản trị tài khoản; profile/ là hồ sơ cá nhân
 │       │   ├── auth/         # API đăng nhập và phiên
+│       │   ├── department/   # Phòng ban, người phụ trách và cây tổ chức
 │       │   ├── security/     # BCrypt, JWT, bảo vệ endpoint, CORS
 │       │   ├── common/       # JSON lỗi chung
 │       │   └── health/       # Kiểm tra server đang chạy
